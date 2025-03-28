@@ -12,7 +12,7 @@ mat2plot <- function(project=c("TCGA-LUSC"), data_dir="./GDCdata", num_tp=100, n
     dir.create("tmp")
   }
   for (p in project){
-    if (file.exists(file.path("tmp", p) == FALSE)){
+    if (file.exists(file.path("tmp", p)) == FALSE){
       dir.create(file.path("tmp", p), recursive = TRUE)
       }
         
