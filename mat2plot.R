@@ -7,12 +7,15 @@ library(limma)
 library(biomaRt)
 library(SummarizedExperiment)
 library(tidytable)
+library(ggplot2)
+library(dplyr)
 
 mat2plot <- function(project=c("TCGA-LUSC"), data_dir="./GDCdata", num_tp=100, num_nt=100,tp_t="TP", tp_n="NT", 
                      is_short=FALSE, save=TRUE, target=c("FAM135B"), candidate="FAM135B"){
   if (file.exists("tmp") == FALSE){
     dir.create("tmp")
   }
+  results <- list()
   for (p in project){
     if (file.exists(file.path("tmp", p)) == FALSE){
       dir.create(file.path("tmp", p), recursive = TRUE)
@@ -95,6 +98,17 @@ mat2plot <- function(project=c("TCGA-LUSC"), data_dir="./GDCdata", num_tp=100, n
 
     if (length(dataSmNT) > 3 ){
       if (candidate %in% rownames(c.dataFilt)){
+        #survival 
+        clin <- GDCquery_clinic(p,"clinical")
+        texp <- c.dataFilt[candidate,dataSmTP_short]
+        cutoff <- median(texp) #use the median, so 50% high + 50% low 
+        group <- ifelse(texp > cutoff, "High", "Low")
+        group <- as_tidytable(data.frame(group), .keep_rownames = "barcode")
+        barcode <- as_tidytable(data.frame(colData(dataPrep1))) %>% select(barcode,patient) %>% filter(barcode %in% dataSmTP_short) %>% inner_join(group,by="barcode")
+        colnames(barcode)[2] <- "submitter_id"
+        df_clin <- barcode %>% inner_join(clin,by="submitter_id")
+        TCGAanalyze_survival(data.frame(df_clin), clusterCol="group", legend=candidate, main = paste("Kaplan-Meier Overall Survival Curves of", p), 
+                             filename = file.path("tmp", p, paste0(p, ".pdf")))
         if (length(target) > 0){
           select_row = c(rownames(c.dataFilt)[1:2], target)}
         else {
@@ -107,7 +121,32 @@ mat2plot <- function(project=c("TCGA-LUSC"), data_dir="./GDCdata", num_tp=100, n
           pipeline="limma",
           Cond1type = "Normal",
           Cond2type = "Tumor",
-          method = "glmLRT")}
+          method = "glmLRT")
+        # 绘制分组箱线图并叠加点和标注
+        pvalue <- DEG[candidate,]$P.Value
+        plegend <- ifelse(pvalue < 0.0001, "****",
+                          ifelse(pvalue< 0.001, "***",
+                            ifelse(pvalue < 0.01, "**",
+                              ifelse(pvalue < 0.05, "*", "ns"))))
+        expression <- c.dataFilt[candidate,c(dataSmTP_short,dataSmNT_short)]
+        exp_data <- data.frame(expression); exp_data$sample <- rownames(exp_data)
+        exp_data <- exp_data %>%
+            mutate(group = ifelse(sample %in% dataSmTP_short, "tumor",
+                            ifelse(sample %in% dataSmNT_short, "normal", NA)))
+    
+        pp <- ggplot(exp_data, aes(x = group, y = expression, fill = group)) +
+        geom_boxplot(outlier.shape = NA, alpha = 0.7) +  # 不显示异常值，使叠加更清晰
+        geom_jitter(width = 0.2, aes(color = group), size = 2) +  # 叠加点，增加抖动防止重叠
+        labs(
+          title = paste("Gene Expression of Cancer vs Normal Samples in", p, "\n", "\n", "\n", plegend),
+          x = "Sample Group",
+          y = "Corrected Voom-transform Value"
+        ) +
+        theme_minimal() +
+        theme(plot.title = element_text(hjust = 0.5, size = 14))  # 隐藏图例（可选）
+        ggsave(file.path("tmp", p, paste0(p, "_Gene_Expression_Boxplot.pdf")), plot = pp, width = 8, height = 6, dpi = 600)
+      
+      }
       else {
         if (length(target) > 1){
             select_row = c(rownames(c.dataFilt)[1:2], target)}
@@ -130,9 +169,39 @@ mat2plot <- function(project=c("TCGA-LUSC"), data_dir="./GDCdata", num_tp=100, n
       }
     tmp_mat <- as_tidytable(c.dataFilt, .keep_rownames = "gene_name")
     fwrite(tmp_mat, file.path("tmp", p, paste0(p,"_exp.csv")))
+    
+    results[paste0(p, "_exp")] <- c.dataFilt
+    results[paste0(p, "_deg")] <- tmp_mat
+
+
+    pvalue <- DEG[candidate,]$P.Value
+    plegend <- ifelse(pvalue < 0.0001, "****",
+       ifelse(pvalue< 0.001, "***",
+              ifelse(pvalue < 0.01, "**",
+                     ifelse(pvalue < 0.05, "*", "ns"))))
+    
+
+    # 绘制分组箱线图并叠加点和标注
+    expression <- c.dataFilt[candidate,c(dataSmTP_short,dataSmNT_short)]
+    exp_data <- data.frame(expression); exp_data$sample <- rownames(exp_data)
+    exp_data <- exp_data %>%
+      mutate(group = ifelse(sample %in% dataSmTP_short, "tumor",
+                            ifelse(sample %in% dataSmNT_short, "normal", NA)))
+    
+    ggplot(exp_data, aes(x = group, y = expression, fill = group)) +
+      geom_boxplot(outlier.shape = NA, alpha = 0.7) +  # 不显示异常值，使叠加更清晰
+      geom_jitter(width = 0.2, aes(color = group), size = 2) +  # 叠加点，增加抖动防止重叠
+      labs(
+          title = paste("Gene Expression of Cancer vs Normal Samples in", p, "\n", "\n", "\n", plegend),
+          x = "Sample Group",
+          y = "Gene Expression"
+      ) +
+      theme_minimal() +
+      theme(plot.title = element_text(hjust = 0.5, size = 14))  # 隐藏图例（可选）
+    
     }
   
-  return(c.dataFilt)
+  return(results)
   }
 #test
 #linshi <- mat2plot(data_dir = "../GDCdata/", is_short = TRUE)
