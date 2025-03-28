@@ -123,13 +123,13 @@ mat2plot <- function(project=c("TCGA-LUSC"), data_dir="./GDCdata", num_tp=100, n
           method = "glmLRT")
       }
       
-      fwrite(as_tidytable(DEG, .keep_rownames = "gene_name"), file.path(p, "_deg.csv"))
+      fwrite(as_tidytable(DEG, .keep_rownames = "gene_name"), file.path("tmp", p, paste0(p,"_deg.csv")))
       }
     else {
       print(paste(p, "It doesn't have enough normal samples!"))
       }
     tmp_mat <- as_tidytable(c.dataFilt, .keep_rownames = "gene_name")
-    fwrite(tmp_mat, file.path(p, "_exp.csv"))
+    fwrite(tmp_mat, file.path("tmp", p, paste0(p,"_exp.csv")))
     }
   
   return(c.dataFilt)
