@@ -116,6 +116,8 @@ mat2plot <- function(project=c("TCGA-LUSC"), data_dir="./GDCdata", num_tp=100, n
   
   return(c.dataFilt)
   }
+#test
+#linshi <- mat2plot(data_dir = "../GDCdata/", is_short = TRUE)
     
 
                             
