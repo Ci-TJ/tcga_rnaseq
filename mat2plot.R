@@ -172,33 +172,6 @@ mat2plot <- function(project=c("TCGA-LUSC"), data_dir="./GDCdata", num_tp=100, n
     
     results[paste0(p, "_exp")] <- c.dataFilt
     results[paste0(p, "_deg")] <- tmp_mat
-
-
-    pvalue <- DEG[candidate,]$P.Value
-    plegend <- ifelse(pvalue < 0.0001, "****",
-       ifelse(pvalue< 0.001, "***",
-              ifelse(pvalue < 0.01, "**",
-                     ifelse(pvalue < 0.05, "*", "ns"))))
-    
-
-    # 绘制分组箱线图并叠加点和标注
-    expression <- c.dataFilt[candidate,c(dataSmTP_short,dataSmNT_short)]
-    exp_data <- data.frame(expression); exp_data$sample <- rownames(exp_data)
-    exp_data <- exp_data %>%
-      mutate(group = ifelse(sample %in% dataSmTP_short, "tumor",
-                            ifelse(sample %in% dataSmNT_short, "normal", NA)))
-    
-    ggplot(exp_data, aes(x = group, y = expression, fill = group)) +
-      geom_boxplot(outlier.shape = NA, alpha = 0.7) +  # 不显示异常值，使叠加更清晰
-      geom_jitter(width = 0.2, aes(color = group), size = 2) +  # 叠加点，增加抖动防止重叠
-      labs(
-          title = paste("Gene Expression of Cancer vs Normal Samples in", p, "\n", "\n", "\n", plegend),
-          x = "Sample Group",
-          y = "Gene Expression"
-      ) +
-      theme_minimal() +
-      theme(plot.title = element_text(hjust = 0.5, size = 14))  # 隐藏图例（可选）
-    
     }
   
   return(results)
