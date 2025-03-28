@@ -57,7 +57,7 @@ mat2plot <- function(project=c("TCGA-LUSC"), data_dir="./GDCdata", num_tp=100, n
                             workflow.type = "STAR - Counts", 
                             barcode = c(dataSmTP_short, dataSmNT_short))}
     
-    dataPrep1 <- GDCprepare(query = queryDown, directory = data_dir, save = save, save.filename = file.path("tmp", p, ".rda"))
+    dataPrep1 <- GDCprepare(query = queryDown, directory = data_dir, save = save, save.filename = file.path("tmp", p, paste0(p,".rda")))
       
     #a step to remove sample outliers using pearson correlation
     #rownames(dataPrep1) <- rowData(dataPrep1)$gene_name #transfer to gene names
