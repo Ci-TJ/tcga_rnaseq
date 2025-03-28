@@ -67,6 +67,10 @@ mat2plot <- function(project=c("TCGA-LUSC"), data_dir="./GDCdata", num_tp=100, n
     dataNorm <- TCGAanalyze_Normalization(tabDF = dataPrep,
                                             geneInfo = geneInfoHT,
                                             method = "gcContent")
+    dataNorm <- TCGAanalyze_Normalization(tabDF = dataPrep,
+                                            geneInfo = geneInfoHT,
+                                            method = "geneLength")
+    
     #quantile filtering to remove genes with low count
     dataFilt <- TCGAanalyze_Filtering(tabDF = dataNorm,
                                         method = "quantile", 
