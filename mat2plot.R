@@ -95,13 +95,13 @@ mat2plot <- function(project=c("TCGA-LUSC"), data_dir="./GDCdata", num_tp=100, n
     v.dataFilt<-voom(dataFilt)
     #taking log transformed data for exploration of batch effects
     #c.dataFilt <- TCGAbatch_Correction(tabDF = v.dataFilt, batch.factor="Plate", adjustment=c("TSS"), is_plot=FALSE)
-    c.dataFilt <- v.dataFilt$E # 初始化为voom转换矩阵，确保后续代码可以继续运行
+    c.dataFilt <- v.dataFilt$E #初始化为voom转换矩阵，确保后续代码可以继续运行
     tryCatch({
       c.dataFilt <- TCGAbatch_Correction(tabDF = v.dataFilt, batch.factor = "Plate", adjustment = "TSS", is_plot = FALSE)
       }, error = function(e) {
-      # 捕获错误并跳过这一步
-      message("TCGAbatch_Correction 出现错误: ", e$message)
-      message("已跳过此步骤。")
+      #Catch and skip
+      message("TCGAbatch_Correction error", e$message)
+      message("Skip!")
     })
     print("Continue!")
     if (length(dataSmNT) > 3 ){
