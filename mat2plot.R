@@ -27,7 +27,7 @@ mat2plot <- function(project=c("TCGA-LUSC"), data_dir="./GDCdata", num_tp=100, n
     #normal samples
     dataSmNT <- TCGAquery_SampleTypes(barcode = samplesDown,
                                   typesample = tp_n)
-    if (is_short == TRUR){
+    if (is_short == TRUE){
       if (all(grepl("TCGA",dataSmNT)) & all(grepl("TCGA",dataSmNT))){
         dataSmTP_short <- dataSmTP[1:ifelse(num_tp <= length(dataSmTP), num_tp, length(dataSmTP))]
         dataSmNT_short <- dataSmNT[1:ifelse(num_nt <= length(dataSmNT), num_nt, length(dataSmNT))]
