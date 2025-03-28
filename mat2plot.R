@@ -7,7 +7,7 @@ library(biomaRt)
 library(SummarizedExperiment)
 library(tidytable)
 
-mat2plot <- function(project=c("TCGA-LUSC"), data_dir="./GDCdata", num_tp=100, num_nt=100,tp_t="TP", tp_n="NT", is_shor=FALSE, save=TRUE, target=c("FAM135B"), candidate="FAM135B"){
+mat2plot <- function(project=c("TCGA-LUSC"), data_dir="./GDCdata", num_tp=100, num_nt=100,tp_t="TP", tp_n="NT", is_short=FALSE, save=TRUE, target=c("FAM135B"), candidate="FAM135B"){
   if (file.exists("tmp") == FALSE){
     dir.create("tmp")
   }
