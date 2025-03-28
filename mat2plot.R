@@ -95,16 +95,17 @@ mat2plot <- function(project=c("TCGA-LUSC"), data_dir="./GDCdata", num_tp=100, n
     if (length(dataSmNT) > 3 ){
       if (candidate %in% rownames(c.dataFilt)){
         DEG <- TCGAanalyze_DEA(
-          mat1=c.dataFilt[ifelse(length(target > 0), target, rownames(c.dataFilt)), dataSmNT_short],
-          mat2=c.dataFilt[ifelse(length(target > 0), target, rownames(c.dataFilt)), dataSmTP_short],
+          #add c(rownames(c.dataFilt)[1:2], target) avoid wrong of data format
+          mat1=c.dataFilt[ifelse(length(target > 0), c(rownames(c.dataFilt)[1:2], target), rownames(c.dataFilt)), dataSmNT_short], 
+          mat2=c.dataFilt[ifelse(length(target > 0), c(rownames(c.dataFilt)[1:2], target), rownames(c.dataFilt)), dataSmTP_short],
           pipeline="limma",
           Cond1type = "Normal",
           Cond2type = "Tumor",
           method = "glmLRT")}
       else {
         DEG <- TCGAanalyze_DEA(
-          mat1=c.dataFilt[ifelse(length(target > 1), target, rownames(c.dataFilt)), dataSmNT_short],
-          mat2=c.dataFilt[ifelse(length(target > 1), target, rownames(c.dataFilt)), dataSmTP_short],
+          mat1=c.dataFilt[ifelse(length(target > 1), c(rownames(c.dataFilt)[1:2], target), rownames(c.dataFilt)), dataSmNT_short],
+          mat2=c.dataFilt[ifelse(length(target > 1), c(rownames(c.dataFilt)[1:2], target), rownames(c.dataFilt)), dataSmTP_short],
           pipeline="limma",
           Cond1type = "Normal",
           Cond2type = "Tumor",
