@@ -1,3 +1,4 @@
+#Bug with TCGAbatch_Correction, you need set is_plot for sva to avoid plot.
 setwd("G:/backup/webService/TCGA/tmp")
 
 library(TCGAbiolinks)
