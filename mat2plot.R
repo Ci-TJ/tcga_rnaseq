@@ -5,9 +5,17 @@ library(plyr)
 library(limma)
 library(biomaRt)
 library(SummarizedExperiment)
+library(tidytable)
 
-mat2plot <- function(project=c("TCGA-ACC"), data_dir="./GDCdata", num_tp=100, num_nt=100,tp_t="TP", tp_n="NT", is_shor=FALSE){
+mat2plot <- function(project=c("TCGA-LUSC"), data_dir="./GDCdata", num_tp=100, num_nt=100,tp_t="TP", tp_n="NT", is_shor=FALSE, save=TRUE, target=c(), candidate="FAM135B"){
+  if (file.exists("tmp") == FALSE){
+    dir.create("tmp")
+  }
   for (p in project){
+    if (file.exists(file.path("tmp", p) == FALSE)){
+      dir.create(file.path("tmp", p), recursive = TRUE)
+      }
+        
     query <- GDCquery(project = p,
                       data.category = "Transcriptome Profiling",
                       data.type = "Gene Expression Quantification", 
@@ -43,14 +51,14 @@ mat2plot <- function(project=c("TCGA-ACC"), data_dir="./GDCdata", num_tp=100, nu
                             data.category = "Transcriptome Profiling",
                             data.type = "Gene Expression Quantification", 
                             workflow.type = "STAR - Counts", 
-                            barcode = c(dataSmTP_short, dataSmNT_short)}
+                            barcode = c(dataSmTP_short, dataSmNT_short))}
     
     queryDown <- GDCquery(project = p, 
                           data.category = "Transcriptome Profiling",
                           data.type = "Gene Expression Quantification", 
                           workflow.type = "STAR - Counts", 
                           barcode = c(dataSmTP_short, dataSmNT_short))
-    dataPrep1 <- GDCprepare(query = queryDown, directory = data_dir, save = TRUE, save.filename = file.path(p, ".rda"))
+    dataPrep1 <- GDCprepare(query = queryDown, directory = data_dir, save = save, save.filename = file.path("tmp", p, ".rda"))
       
     #a step to remove sample outliers using pearson correlation
     dataPrep <- TCGAanalyze_Preprocessing(object = dataPrep1, 
@@ -63,6 +71,28 @@ mat2plot <- function(project=c("TCGA-ACC"), data_dir="./GDCdata", num_tp=100, nu
     dataFilt <- TCGAanalyze_Filtering(tabDF = dataNorm,
                                         method = "quantile", 
                                         qnt.cut =  0.25)
+
+    #voom transformation of the data (log)
+    v.dataFilt<-voom(dataFilt)
+    #taking log transformed data for exploration of batch effects
+    c.dataFilt <- TCGAbatch_Correction(tabDF = v.dataFilt, batch.factor="Plate", adjustment=c("TSS"))
+
+    if (length(dataSmNT) > 3 & candidate %in% rownames(c.dataFilt)){
+      DEG <- TCGAanalyze_DEA(
+        mat1=c.dataFilt[ifelse(length(target > 0), targe, rownames(c.dataFilt)), dataSmNT_short],
+        mat2=c.dataFilt[ifelse(length(target > 0), targe, rownames(c.dataFilt)), dataSmTP_short],
+        pipeline="limma",
+        Cond1type = "Normal",
+        Cond2type = "Tumor",
+        method = "glmLRT")
+      
+      fwrite(as_tidytable(DEG, .keep_rownames = "gene_name"),file.path(p, ".csv"))
+      }
+    }
+  }
+    
+
+                            
     
                                          
                                          
