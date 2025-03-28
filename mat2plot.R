@@ -29,8 +29,8 @@ mat2plot <- function(project=c("TCGA-LUSC"), data_dir="./GDCdata", num_tp=100, n
                                   typesample = tp_n)
     if (is_short == TRUR){
       if (all(grepl("TCGA",dataSmNT)) & all(grepl("TCGA",dataSmNT))){
-        dataSmTP_short <- dataSmTP[1:ifelse(num_tp <= length(dataSmTP), num_tp, ;length(dataSmTP))]
-        dataSmNT_short <- dataSmNT[1:ifelse(num_nt <= length(dataSmNT), num_nt, ;length(dataSmNT))]
+        dataSmTP_short <- dataSmTP[1:ifelse(num_tp <= length(dataSmTP), num_tp, length(dataSmTP))]
+        dataSmNT_short <- dataSmNT[1:ifelse(num_nt <= length(dataSmNT), num_nt, length(dataSmNT))]
         queryDown <- GDCquery(project = p, 
                             data.category = "Transcriptome Profiling",
                             data.type = "Gene Expression Quantification", 
