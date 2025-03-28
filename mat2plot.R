@@ -95,22 +95,33 @@ mat2plot <- function(project=c("TCGA-LUSC"), data_dir="./GDCdata", num_tp=100, n
 
     if (length(dataSmNT) > 3 ){
       if (candidate %in% rownames(c.dataFilt)){
+        if (length(target) > 0){
+          select_row = c(rownames(c.dataFilt)[1:2], target)}
+        else {
+          select_row = rownames(c.dataFilt)
+          }
         DEG <- TCGAanalyze_DEA(
           #add c(rownames(c.dataFilt)[1:2], target) avoid wrong of data format
-          mat1=c.dataFilt[ifelse(length(target > 0), c(rownames(c.dataFilt)[1:2], target), rownames(c.dataFilt)), dataSmNT_short], 
-          mat2=c.dataFilt[ifelse(length(target > 0), c(rownames(c.dataFilt)[1:2], target), rownames(c.dataFilt)), dataSmTP_short],
+          mat1=c.dataFilt[select_row, dataSmNT_short], 
+          mat2=c.dataFilt[select_row, dataSmTP_short],
           pipeline="limma",
           Cond1type = "Normal",
           Cond2type = "Tumor",
           method = "glmLRT")}
       else {
+        if (length(target) > 1){
+            select_row = c(rownames(c.dataFilt)[1:2], target)}
+        else {
+            select_row = rownames(c.dataFilt)
+            }
         DEG <- TCGAanalyze_DEA(
-          mat1=c.dataFilt[ifelse(length(target > 1), c(rownames(c.dataFilt)[1:2], target), rownames(c.dataFilt)), dataSmNT_short],
-          mat2=c.dataFilt[ifelse(length(target > 1), c(rownames(c.dataFilt)[1:2], target), rownames(c.dataFilt)), dataSmTP_short],
+          mat1=c.dataFilt[select_row, dataSmNT_short], 
+          mat2=c.dataFilt[select_row, dataSmTP_short],
           pipeline="limma",
           Cond1type = "Normal",
           Cond2type = "Tumor",
-          method = "glmLRT")}
+          method = "glmLRT")
+      }
       
       fwrite(as_tidytable(DEG, .keep_rownames = "gene_name"), file.path(p, "_deg.csv"))
       }
