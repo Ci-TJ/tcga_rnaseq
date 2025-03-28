@@ -58,7 +58,7 @@ mat2plot <- function(project=c("TCGA-LUSC"), data_dir="./GDCdata", num_tp=100, n
     dataPrep1 <- GDCprepare(query = queryDown, directory = data_dir, save = save, save.filename = file.path("tmp", p, ".rda"))
       
     #a step to remove sample outliers using pearson correlation
-    rownames(dataPrep1) <- rowData(dataPrep1)$gene_name #transfer to gene names
+    #rownames(dataPrep1) <- rowData(dataPrep1)$gene_name #transfer to gene names
     dataPrep <- TCGAanalyze_Preprocessing(object = dataPrep1, 
                                             cor.cut = 0.6,)
     
@@ -70,6 +70,17 @@ mat2plot <- function(project=c("TCGA-LUSC"), data_dir="./GDCdata", num_tp=100, n
     dataFilt <- TCGAanalyze_Filtering(tabDF = dataNorm,
                                         method = "quantile", 
                                         qnt.cut =  0.25)
+
+    id2s <- as_tidytable(data.frame(rowData(dataPrep1))) %>% select(gene_id,gene_name) %>% mutate(gene_id = stringr::str_remove(gene_id, "\\..*")) 
+    id2s <- id2s %>% filter(gene_id %in% rownames(dataFilt)) %>% distinct(gene_name, .keep_all = T)
+    dataFilt <- dataFilt[id2s$gene_id,] #filter the genes with redundancy gene names
+    #make sure the order
+    if (all(rownames(dataFilt) == id2s$gene_id)){
+      rownames(dataFilt) <- id2s$gene_name
+      }
+    else {
+      print("Order is Wrong!!!")
+      }
 
     #voom transformation of the data (log)
     v.dataFilt<-voom(dataFilt)
