@@ -23,43 +23,44 @@ mat2plot <- function(project=c("TCGA-LUSC"), data_dir="./GDCdata", num_tp=100, n
     #######
     if (file.exists(file.path("tmp", p, paste0(p,"_exp.csv"))) == FALSE){
       query <- GDCquery(project = p,
-                      data.category = "Transcriptome Profiling",
-                      data.type = "Gene Expression Quantification", 
-                      workflow.type = "STAR - Counts")
+                        data.category = "Transcriptome Profiling",
+                        data.type = "Gene Expression Quantification", 
+                        workflow.type = "STAR - Counts")
       samplesDown <- getResults(query,cols=c("cases"))
       #tumor samples
       dataSmTP <- TCGAquery_SampleTypes(barcode = samplesDown,
-                                  typesample = tp_t)
+                                        typesample = tp_t)
       #normal samples
       dataSmNT <- TCGAquery_SampleTypes(barcode = samplesDown,
-                                  typesample = tp_n)
+                                        typesample = tp_n)
       if (is_short == TRUE){
         if (all(grepl("TCGA",dataSmNT)) & all(grepl("TCGA",dataSmNT))){
           dataSmTP_short <- dataSmTP[1:ifelse(num_tp <= length(dataSmTP), num_tp, length(dataSmTP))]
           dataSmNT_short <- dataSmNT[1:ifelse(num_nt <= length(dataSmNT), num_nt, length(dataSmNT))]
-          queryDown <- GDCquery(project = p, 
-                            data.category = "Transcriptome Profiling",
-                            data.type = "Gene Expression Quantification", 
-                            workflow.type = "STAR - Counts", 
-                            barcode = c(dataSmTP_short, dataSmNT_short))
+          queryDown <- GDCquery(project = p,
+                                data.category = "Transcriptome Profiling",
+                                data.type = "Gene Expression Quantification", 
+                                workflow.type = "STAR - Counts", 
+                                barcode = c(dataSmTP_short, dataSmNT_short))
           } 
         else{
           dataSmTP_short <- dataSmTP[1:length(dataSmTP)]
           dataSmNT_short <- dataSmNT[1:length(dataSmNT)]
           queryDown <- GDCquery(project = p, 
-                            data.category = "Transcriptome Profiling",
-                            data.type = "Gene Expression Quantification", 
-                            workflow.type = "STAR - Counts", 
-                            barcode = c(dataSmTP_short, dataSmNT_short))
-          }} 
+                                data.category = "Transcriptome Profiling",
+                                data.type = "Gene Expression Quantification", 
+                                workflow.type = "STAR - Counts", 
+                                barcode = c(dataSmTP_short, dataSmNT_short))
+          }
+      } 
       else{
         dataSmTP_short <- dataSmTP
         dataSmNT_short <- dataSmNT
         queryDown <- GDCquery(project = p, 
-                            data.category = "Transcriptome Profiling",
-                            data.type = "Gene Expression Quantification", 
-                            workflow.type = "STAR - Counts", 
-                            barcode = c(dataSmTP_short, dataSmNT_short))}
+                              data.category = "Transcriptome Profiling",
+                              data.type = "Gene Expression Quantification", 
+                              workflow.type = "STAR - Counts", 
+                              barcode = c(dataSmTP_short, dataSmNT_short))}
     
       dataPrep1 <- GDCprepare(query = queryDown, directory = data_dir, save = save, save.filename = file.path("tmp", p, paste0(p,".rda")))
       
@@ -117,9 +118,10 @@ mat2plot <- function(project=c("TCGA-LUSC"), data_dir="./GDCdata", num_tp=100, n
           colnames(barcode)[2] <- "submitter_id"
           df_clin <- barcode %>% inner_join(clin,by="submitter_id")
           TCGAanalyze_survival(data.frame(df_clin), clusterCol="group", legend=candidate, main = paste("Kaplan-Meier Overall Survival Curves of", p), 
-                             filename = file.path("tmp", p, paste0(p, ".pdf")))
+                               filename = file.path("tmp", p, paste0(p, ".pdf")))
           if (length(target) > 0){
-            select_row = c(rownames(c.dataFilt)[1:2], target)}
+            select_row = c(rownames(c.dataFilt)[1:2], target)
+          }
           else {
             select_row = rownames(c.dataFilt)
             }
@@ -134,14 +136,15 @@ mat2plot <- function(project=c("TCGA-LUSC"), data_dir="./GDCdata", num_tp=100, n
           # 绘制分组箱线图并叠加点和标注
           pvalue <- DEG[candidate,]$P.Value
           plegend <- ifelse(pvalue < 0.0001, "****",
-                          ifelse(pvalue< 0.001, "***",
-                            ifelse(pvalue < 0.01, "**",
-                              ifelse(pvalue < 0.05, "*", "ns"))))
+                            ifelse(pvalue< 0.001, "***",
+                                   ifelse(pvalue < 0.01, "**",
+                                          ifelse(pvalue < 0.05, "*", "ns"))))
+          
           expression <- c.dataFilt[candidate,c(dataSmTP_short,dataSmNT_short)]
           exp_data <- data.frame(expression); exp_data$sample <- rownames(exp_data)
           exp_data <- exp_data %>%
-              mutate(group = ifelse(sample %in% dataSmTP_short, "tumor",
-                            ifelse(sample %in% dataSmNT_short, "normal", NA)))
+                        mutate(group = ifelse(sample %in% dataSmTP_short, "tumor",
+                                              ifelse(sample %in% dataSmNT_short, "normal", NA)))
     
           pp <- ggplot(exp_data, aes(x = group, y = expression, fill = group)) +
           geom_boxplot(outlier.shape = NA, alpha = 0.7) +  # 不显示异常值，使叠加更清晰
