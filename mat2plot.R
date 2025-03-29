@@ -21,7 +21,7 @@ mat2plot <- function(project=c("TCGA-LUSC"), data_dir="./GDCdata", num_tp=100, n
       dir.create(file.path("tmp", p), recursive = TRUE)
       }
     #######
-    if (file.exists(file.path("tmp", p, paste0(p,"_exp.csv")) == FALSE)){
+    if (file.exists(file.path("tmp", p, paste0(p,"_exp.csv"))) == FALSE){
       query <- GDCquery(project = p,
                       data.category = "Transcriptome Profiling",
                       data.type = "Gene Expression Quantification", 
