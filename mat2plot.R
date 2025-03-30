@@ -9,9 +9,11 @@ library(SummarizedExperiment)
 library(tidytable)
 library(ggplot2)
 library(dplyr)
+library(DGEobj.utils)
 
 mat2plot <- function(project=c("TCGA-LUSC"), data_dir="./GDCdata", num_tp=100, num_nt=100,tp_t="TP", tp_n="NT", 
-                     is_short=FALSE, save=TRUE, target=c("FAM135B"), candidate="FAM135B"){
+                     is_short=FALSE, save=TRUE, target=c("FAM135B"), candidate="FAM135B",voom=TRUE, is_log=TRUE, norm_method="none",
+                     prior.count=1, unit="tpm"){
   if (file.exists("tmp") == FALSE){
     dir.create("tmp")
   }
@@ -68,36 +70,59 @@ mat2plot <- function(project=c("TCGA-LUSC"), data_dir="./GDCdata", num_tp=100, n
       #rownames(dataPrep1) <- rowData(dataPrep1)$gene_name #transfer to gene names
       dataPrep <- TCGAanalyze_Preprocessing(object = dataPrep1, 
                                             cor.cut = 0.6,)
+      if (voom) {
+        #step with library size and gcContent normalization using EDASeq
+        dataNorm <- TCGAanalyze_Normalization(tabDF = dataPrep,
+                                              geneInfo = geneInfoHT,
+                                              method = "gcContent")
+        dataNorm <- TCGAanalyze_Normalization(tabDF = dataPrep,
+                                              geneInfo = geneInfoHT,
+                                              method = "geneLength")
     
-      #step with library size and gcContent normalization using EDASeq
-      dataNorm <- TCGAanalyze_Normalization(tabDF = dataPrep,
-                                            geneInfo = geneInfoHT,
-                                            method = "gcContent")
-      dataNorm <- TCGAanalyze_Normalization(tabDF = dataPrep,
-                                            geneInfo = geneInfoHT,
-                                            method = "geneLength")
-    
-      #quantile filtering to remove genes with low count
-      dataFilt <- TCGAanalyze_Filtering(tabDF = dataNorm,
-                                        method = "quantile", 
-                                        qnt.cut =  0.25)
+        #quantile filtering to remove genes with low count
+        dataFilt <- TCGAanalyze_Filtering(tabDF = dataNorm,
+                                          method = "quantile", 
+                                          qnt.cut =  0.25)
 
-      id2s <- as_tidytable(data.frame(rowData(dataPrep1))) %>% select(gene_id,gene_name) %>% mutate(gene_id = stringr::str_remove(gene_id, "\\..*")) 
-      id2s <- id2s %>% filter(gene_id %in% rownames(dataFilt)) %>% distinct(gene_name, .keep_all = T)
-      dataFilt <- dataFilt[id2s$gene_id,] #filter the genes with redundancy gene names
-      #make sure the order
-      if (all(rownames(dataFilt) == id2s$gene_id)){
-        rownames(dataFilt) <- id2s$gene_name
-        }
+        id2s <- as_tidytable(data.frame(rowData(dataPrep1))) %>% select(gene_id,gene_name) %>% mutate(gene_id = stringr::str_remove(gene_id, "\\..*")) 
+        id2s <- id2s %>% filter(gene_id %in% rownames(dataFilt)) %>% distinct(gene_name, .keep_all = T)
+        dataFilt <- dataFilt[id2s$gene_id,] #filter the genes with redundancy gene names
+        #make sure the order
+        if (all(rownames(dataFilt) == id2s$gene_id)){
+          rownames(dataFilt) <- id2s$gene_name
+          }
+        else {
+          print("Order is Wrong!!!")
+          }
+
+        #voom transformation of the data (log)
+        v.dataFilt<-voom(dataFilt)
+        #taking log transformed data for exploration of batch effects
+        #c.dataFilt <- TCGAbatch_Correction(tabDF = v.dataFilt, batch.factor="Plate", adjustment=c("TSS"), is_plot=FALSE)
+        c.dataFilt <- v.dataFilt$E #初始化为voom转换矩阵，确保后续代码可以继续运行
+      }
       else {
-        print("Order is Wrong!!!")
+        colnames(dataPre) <- gsub("[.].*", "",rownames(dataPrep))
+        ss <- intersect(rownames(dd), rownames(geneInfoHT))
+        dataNorm <- dataPre[ss,]
+        len_info <- geneInfoHT[ss,]$geneLength
+        v.dataFilt <- convertCounts(
+          countsMatrix = dataNorm,
+          unit = unit,
+          geneLength = len_info,
+          log = is_log,
+          normalize  = norm_method,
+          prior.count = prior.count #note this will be log2(tpm + prior.count)
+        )
+        
+        if (is_log == FALSE){
+          v.dataFilt <- log2(v.dataFilt + prior.count) #note convertCounts is log2(tpm), not log2(tpm+1)
         }
-
-      #voom transformation of the data (log)
-      v.dataFilt<-voom(dataFilt)
-      #taking log transformed data for exploration of batch effects
-      #c.dataFilt <- TCGAbatch_Correction(tabDF = v.dataFilt, batch.factor="Plate", adjustment=c("TSS"), is_plot=FALSE)
-      c.dataFilt <- v.dataFilt$E #初始化为voom转换矩阵，确保后续代码可以继续运行
+        #taking log transformed data for exploration of batch effects
+        #c.dataFilt <- TCGAbatch_Correction(tabDF = v.dataFilt, batch.factor="Plate", adjustment=c("TSS"), is_plot=FALSE)
+        c.dataFilt <- v.dataFilt #初始化为voom转换矩阵，确保后续代码可以继续运行
+      }
+      
       tryCatch({
         c.dataFilt <- TCGAbatch_Correction(tabDF = v.dataFilt, batch.factor = "Plate", adjustment = "TSS", is_plot = FALSE)
         }, error = function(e) {
