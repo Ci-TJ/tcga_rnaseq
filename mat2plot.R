@@ -12,8 +12,8 @@ library(dplyr)
 library(DGEobj.utils)
 
 mat2plot <- function(project=c("TCGA-LUSC"), data_dir="./GDCdata", num_tp=100, num_nt=100,tp_t="TP", tp_n="NT", 
-                     is_short=FALSE, save=TRUE, target=c("FAM135B"), candidate="FAM135B",voom=TRUE, is_log=TRUE, norm_method="none",
-                     prior.count=1, unit="tpm"){
+                     is_short=FALSE, save=TRUE, target=c("FAM135B"), candidate="FAM135B",voom=TRUE, is_log=FALSE, norm_method="none",
+                     prior.count=0, unit="tpm"){
   if (file.exists("tmp") == FALSE){
     dir.create("tmp")
   }
@@ -102,8 +102,8 @@ mat2plot <- function(project=c("TCGA-LUSC"), data_dir="./GDCdata", num_tp=100, n
         c.dataFilt <- v.dataFilt$E #初始化为voom转换矩阵，确保后续代码可以继续运行
       }
       else {
-        colnames(dataPre) <- gsub("[.].*", "",rownames(dataPrep))
-        ss <- intersect(rownames(dd), rownames(geneInfoHT))
+        rownames(dataPre) <- gsub("[.].*", "",rownames(dataPrep))
+        ss <- intersect(rownames(dataPrep), rownames(geneInfoHT))
         dataNorm <- dataPre[ss,]
         len_info <- geneInfoHT[ss,]$geneLength
         v.dataFilt <- convertCounts(
@@ -112,11 +112,11 @@ mat2plot <- function(project=c("TCGA-LUSC"), data_dir="./GDCdata", num_tp=100, n
           geneLength = len_info,
           log = is_log,
           normalize  = norm_method,
-          prior.count = prior.count #note this will be log2(tpm + prior.count)
+          prior.count = prior.count #note prior.count=1 ！= log2(tpm + prior.count), prior.count=1 but not recemmend for DE analysis!
         )
         
         if (is_log == FALSE){
-          v.dataFilt <- log2(v.dataFilt + prior.count) #note convertCounts is log2(tpm), not log2(tpm+1)
+          v.dataFilt <- log2(v.dataFilt + 1) #note convertCounts is log2(tpm), not log2(tpm+1)
         }
         #taking log transformed data for exploration of batch effects
         #c.dataFilt <- TCGAbatch_Correction(tabDF = v.dataFilt, batch.factor="Plate", adjustment=c("TSS"), is_plot=FALSE)
