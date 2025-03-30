@@ -110,6 +110,7 @@ mat2plot <- function(project=c("TCGA-LUSC"), data_dir="./GDCdata", num_tp=100, n
         if (candidate %in% rownames(c.dataFilt)){
           #survival 
           clin <- GDCquery_clinic(p,"clinical")
+          flup <- fread(file.path(data_dir,"clinic_data", paste0(p, "_follow_up.tsv"))) #Note the file path!
           texp <- c.dataFilt[candidate,dataSmTP_short]
           cutoff <- median(texp) #use the median, so 50% high + 50% low 
           group <- ifelse(texp > cutoff, "High", "Low")
@@ -117,6 +118,26 @@ mat2plot <- function(project=c("TCGA-LUSC"), data_dir="./GDCdata", num_tp=100, n
           barcode <- as_tidytable(data.frame(colData(dataPrep1))) %>% select(barcode,patient) %>% filter(barcode %in% dataSmTP_short) %>% inner_join(group,by="barcode")
           colnames(barcode)[2] <- "submitter_id"
           df_clin <- barcode %>% inner_join(clin,by="submitter_id")
+          ##############
+          for (i in 1:nrow(df_clin)){
+            id <- df_clin$submitter_id[i]
+            if (id %in% flup$cases.submitter_id){
+              #print(paste(id,"in followup!",'\n'))
+              fdf <- flup %>% filter(cases.submitter_id == id)
+              days_followup <- as.numeric(fdf$follow_ups.days_to_follow_up)
+              #print(days_followup)
+              days_followup <- days_followup[!is.na(days_followup)]
+              #print(days_followup)
+              if (length(days_followup) >1){
+                last_day_followup <- max(days_followup)
+                df_clin$days_to_last_follow_up[i] <- last_day_followup
+              }
+            }
+            else {
+              print(paste(id, "is not in follow table!", "\n"))
+            }
+          }
+          ##############
           TCGAanalyze_survival(data.frame(df_clin), clusterCol="group", legend=candidate, main = paste("Kaplan-Meier Overall Survival Curves of", p), 
                                filename = file.path("tmp", p, paste0(p, ".pdf")))
           if (length(target) > 0){
