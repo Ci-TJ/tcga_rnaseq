@@ -245,6 +245,7 @@ mat2plot <- function(project=c("TCGA-LUSC"), data_dir="./GDCdata", num_tp=100, n
 #linshi <- mat2plot(data_dir = "../GDCdata/", is_short = TRUE)
 #project=c("TCGA-LUSC"); data_dir="../GDCdata"; num_tp=100; num_nt=100;tp_t="TP"; tp_n="NT"; 
 #is_short=TRUE; save=TRUE; target=c("FAM135B"); candidate="FAM135B";p=project[1]
+#voom=TRUE; is_log=TRUE; norm_method="none";prior.count=1; unit="tpm"
     
 
                             
