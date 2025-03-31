@@ -47,7 +47,7 @@ tcga2gtex <- function(project=c("TCGA-LUSC"), data_dir="./GDCdata", num_tp=100, 
       dataSmNT <- TCGAquery_SampleTypes(barcode = samplesDown,
                                         typesample = tp_n)
       if (is_short == TRUE){
-        if (all(grepl("TCGA",dataSmNT)) & all(grepl("TCGA",dataSmNT))){
+        if (all(grepl("TCGA",dataSmNT)) & all(grepl("TCGA",dataSmTP))){
           dataSmTP_short <- dataSmTP[1:ifelse(num_tp <= length(dataSmTP), num_tp, length(dataSmTP))]
           dataSmNT_short <- dataSmNT[1:ifelse(num_nt <= length(dataSmNT), num_nt, length(dataSmNT))]
           queryDown <- GDCquery(project = p,
@@ -65,7 +65,7 @@ tcga2gtex <- function(project=c("TCGA-LUSC"), data_dir="./GDCdata", num_tp=100, 
                                 workflow.type = "STAR - Counts", 
                                 barcode = c(dataSmTP_short, dataSmNT_short))
           }
-      } 
+      }
       else{
         dataSmTP_short <- dataSmTP
         dataSmNT_short <- dataSmNT
@@ -73,7 +73,8 @@ tcga2gtex <- function(project=c("TCGA-LUSC"), data_dir="./GDCdata", num_tp=100, 
                               data.category = "Transcriptome Profiling",
                               data.type = "Gene Expression Quantification", 
                               workflow.type = "STAR - Counts", 
-                              barcode = c(dataSmTP_short, dataSmNT_short))}
+                              barcode = c(dataSmTP_short, dataSmNT_short))
+      }
     
       dataPrep1 <- GDCprepare(query = queryDown, directory = data_dir, save = save, save.filename = file.path("tmp", p, paste0(p,"_gtex.rda")))
       
