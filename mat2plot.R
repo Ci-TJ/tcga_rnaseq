@@ -22,7 +22,7 @@ mat2plot <- function(project=c("TCGA-LUSC"), data_dir="./GDCdata", num_tp=100, n
   for (p in project){
     if (file.exists(file.path("tmp", p)) == FALSE){
       dir.create(file.path("tmp", p), recursive = TRUE)
-      }
+    }
     #######
     if (file.exists(file.path("tmp", p, paste0(p,"_exp.csv"))) == FALSE){
       query <- GDCquery(project = p,
@@ -45,7 +45,7 @@ mat2plot <- function(project=c("TCGA-LUSC"), data_dir="./GDCdata", num_tp=100, n
                                 data.type = "Gene Expression Quantification", 
                                 workflow.type = "STAR - Counts", 
                                 barcode = c(dataSmTP_short, dataSmNT_short))
-          } 
+          }
         else{
           dataSmTP_short <- dataSmTP[1:length(dataSmTP)]
           dataSmNT_short <- dataSmNT[1:length(dataSmNT)]
@@ -237,7 +237,7 @@ mat2plot <- function(project=c("TCGA-LUSC"), data_dir="./GDCdata", num_tp=100, n
       }
     else {
       print(paste(p, "is OK!"))
-    }
+      }
         
     } #for end
     return(results)
