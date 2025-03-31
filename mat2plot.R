@@ -18,6 +18,7 @@ mat2plot <- function(project=c("TCGA-LUSC"), data_dir="./GDCdata", num_tp=100, n
     dir.create("tmp")
   }
   results <- list()
+  #
   for (p in project){
     if (file.exists(file.path("tmp", p)) == FALSE){
       dir.create(file.path("tmp", p), recursive = TRUE)
@@ -84,7 +85,7 @@ mat2plot <- function(project=c("TCGA-LUSC"), data_dir="./GDCdata", num_tp=100, n
                                           method = "quantile", 
                                           qnt.cut =  0.25)
 
-        id2s <- as_tidytable(data.frame(rowData(dataPrep1))) %>% select(gene_id,gene_name) %>% mutate(gene_id = stringr::str_remove(gene_id, "\\..*")) 
+        id2s <- as_tidytable(data.frame(rowData(dataPrep1))) %>% select(gene_id,gene_name) %>% mutate(gene_id = stringr::str_remove(gene_id, "\\..*"))
         id2s <- id2s %>% filter(gene_id %in% rownames(dataFilt)) %>% distinct(gene_name, .keep_all = T)
         dataFilt <- dataFilt[id2s$gene_id,] #filter the genes with redundancy gene names
         #make sure the order
@@ -131,7 +132,9 @@ mat2plot <- function(project=c("TCGA-LUSC"), data_dir="./GDCdata", num_tp=100, n
         message("Skip!")
       })
       print("Continue!")
+      ##
       if (length(dataSmNT) > 3 ){
+        ###
         if (candidate %in% rownames(c.dataFilt)){
           #survival 
           clin <- GDCquery_clinic(p,"clinical")
@@ -204,7 +207,7 @@ mat2plot <- function(project=c("TCGA-LUSC"), data_dir="./GDCdata", num_tp=100, n
           theme(plot.title = element_text(hjust = 0.5, size = 14))  # 隐藏图例（可选）
           ggsave(file.path("tmp", p, paste0(p, "_Gene_Expression_Boxplot.pdf")), plot = pp, width = 8, height = 6, dpi = 600)
       
-        }
+        } ###
         else {
           if (length(target) > 1){
               select_row = c(rownames(c.dataFilt)[1:2], target)}
@@ -221,7 +224,7 @@ mat2plot <- function(project=c("TCGA-LUSC"), data_dir="./GDCdata", num_tp=100, n
         }
       
         fwrite(as_tidytable(DEG, .keep_rownames = "gene_name"), file.path("tmp", p, paste0(p,"_deg.csv")))
-        }
+        }##
       else {
         print(paste(p, "It doesn't have enough normal samples!"))
         }
