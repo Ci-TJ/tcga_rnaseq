@@ -37,7 +37,7 @@ mat2plot <- function(project=c("TCGA-LUSC"), data_dir="./GDCdata", num_tp=100, n
       dataSmNT <- TCGAquery_SampleTypes(barcode = samplesDown,
                                         typesample = tp_n)
       if (is_short == TRUE){
-        if (all(grepl("TCGA",dataSmNT)) & all(grepl("TCGA",dataSmNT))){
+        if (all(grepl("TCGA",dataSmNT)) & all(grepl("TCGA",dataSmTP))){
           dataSmTP_short <- dataSmTP[1:ifelse(num_tp <= length(dataSmTP), num_tp, length(dataSmTP))]
           dataSmNT_short <- dataSmNT[1:ifelse(num_nt <= length(dataSmNT), num_nt, length(dataSmNT))]
           queryDown <- GDCquery(project = p,
@@ -45,8 +45,7 @@ mat2plot <- function(project=c("TCGA-LUSC"), data_dir="./GDCdata", num_tp=100, n
                                 data.type = "Gene Expression Quantification", 
                                 workflow.type = "STAR - Counts", 
                                 barcode = c(dataSmTP_short, dataSmNT_short))
-          }
-        else{
+        } else {
           dataSmTP_short <- dataSmTP[1:length(dataSmTP)]
           dataSmNT_short <- dataSmNT[1:length(dataSmNT)]
           queryDown <- GDCquery(project = p, 
@@ -54,17 +53,17 @@ mat2plot <- function(project=c("TCGA-LUSC"), data_dir="./GDCdata", num_tp=100, n
                                 data.type = "Gene Expression Quantification", 
                                 workflow.type = "STAR - Counts", 
                                 barcode = c(dataSmTP_short, dataSmNT_short))
-          }
-      } 
-      else{
+        }
+      } else {
         dataSmTP_short <- dataSmTP
         dataSmNT_short <- dataSmNT
         queryDown <- GDCquery(project = p, 
                               data.category = "Transcriptome Profiling",
                               data.type = "Gene Expression Quantification", 
                               workflow.type = "STAR - Counts", 
-                              barcode = c(dataSmTP_short, dataSmNT_short))}
-    
+                              barcode = c(dataSmTP_short, dataSmNT_short))
+      }
+      
       dataPrep1 <- GDCprepare(query = queryDown, directory = data_dir, save = save, save.filename = file.path("tmp", p, paste0(p,".rda")))
       
       #a step to remove sample outliers using pearson correlation
@@ -91,18 +90,16 @@ mat2plot <- function(project=c("TCGA-LUSC"), data_dir="./GDCdata", num_tp=100, n
         #make sure the order
         if (all(rownames(dataFilt) == id2s$gene_id)){
           rownames(dataFilt) <- id2s$gene_name
-          }
-        else {
+        } else {
           print("Order is Wrong!!!")
-          }
+        }
 
         #voom transformation of the data (log)
         v.dataFilt<-voom(dataFilt)
         #taking log transformed data for exploration of batch effects
         #c.dataFilt <- TCGAbatch_Correction(tabDF = v.dataFilt, batch.factor="Plate", adjustment=c("TSS"), is_plot=FALSE)
         c.dataFilt <- v.dataFilt$E #初始化为voom转换矩阵，确保后续代码可以继续运行
-      }
-      else {
+      } else {
         rownames(dataPre) <- gsub("[.].*", "",rownames(dataPrep))
         ss <- intersect(rownames(dataPrep), rownames(geneInfoHT))
         dataNorm <- dataPre[ss,]
@@ -224,24 +221,25 @@ mat2plot <- function(project=c("TCGA-LUSC"), data_dir="./GDCdata", num_tp=100, n
         }
       
         fwrite(as_tidytable(DEG, .keep_rownames = "gene_name"), file.path("tmp", p, paste0(p,"_deg.csv")))
-        }##
-      else {
+        ##
+      } else {
         print(paste(p, "It doesn't have enough normal samples!"))
-        }
+      }
+      
       tmp_mat <- as_tidytable(c.dataFilt, .keep_rownames = "gene_name")
       fwrite(tmp_mat, file.path("tmp", p, paste0(p,"_exp.csv")))
     
       results[[paste0(p, "_exp")]] <- c.dataFilt
       results[[paste0(p, "_deg")]] <- tmp_mat
     
-      }
-    else {
+    } else {
       print(paste(p, "is OK!"))
-      }
-        
-    } #for end
-    return(results)
+    }
+    
+    #for end     
   }
+  return(results)
+}
 #test
 #linshi <- mat2plot(data_dir = "../GDCdata/", is_short = TRUE)
 #project=c("TCGA-LUSC"); data_dir="../GDCdata"; num_tp=100; num_nt=100;tp_t="TP"; tp_n="NT"; 
