@@ -28,11 +28,6 @@ tcga2gtex <- function(project=c("TCGA-LUSC"), data_dir="./GDCdata", num_tp=100, 
   gtex_data <- data.frame(gtex_data); rownames(gtex_data) <- gtex_data$Description; gtex_data <- gtex_data[,-c(1,2)]
   colnames(gtex_data) <- gsub("\\.", "-", colnames(gtex_data)) #colnames change after distinct()
 
-# 输出结果
-print(modified_string)
-
-  
-  
   #
   for (p in project){
     if (file.exists(file.path("tmp", p)) == FALSE){
