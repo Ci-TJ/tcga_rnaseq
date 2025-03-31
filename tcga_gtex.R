@@ -110,9 +110,9 @@ tcga2gtex <- function(project=c("TCGA-LUSC"), data_dir="./GDCdata", num_tp=100, 
         #c.dataFilt <- TCGAbatch_Correction(tabDF = v.dataFilt, batch.factor="Plate", adjustment=c("TSS"), is_plot=FALSE)
         c.dataFilt <- v.dataFilt$E #初始化为voom转换矩阵，确保后续代码可以继续运行
       } else {
-        rownames(dataPre) <- gsub("[.].*", "",rownames(dataPrep))
+        rownames(dataPrep) <- gsub("[.].*", "",rownames(dataPrep))
         ss <- intersect(rownames(dataPrep), rownames(geneInfoHT))
-        dataNorm <- dataPre[ss,]
+        dataNorm <- dataPrep[ss,]
         len_info <- geneInfoHT[ss,]$geneLength
         v.dataFilt <- convertCounts(
           countsMatrix = dataNorm,
