@@ -233,17 +233,15 @@ mat2plot <- function(project=c("TCGA-LUSC"), data_dir="./GDCdata", num_tp=100, n
     
       results[[paste0(p, "_exp")]] <- c.dataFilt
       results[[paste0(p, "_deg")]] <- tmp_mat
-      
-      
-      
+    
       }
     else {
       print(paste(p, "is OK!"))
     }
         
-      } #for end
+    } #for end
     return(results)
-    }
+  }
 #test
 #linshi <- mat2plot(data_dir = "../GDCdata/", is_short = TRUE)
 #project=c("TCGA-LUSC"); data_dir="../GDCdata"; num_tp=100; num_nt=100;tp_t="TP"; tp_n="NT"; 
