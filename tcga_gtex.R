@@ -137,7 +137,7 @@ tcga2gtex <- function(project=c("TCGA-LUSC"), data_dir="./GDCdata", num_tp=100, 
       tissue <- df_split %>% filter(project == p) %>% pull(GTEx_SMTSD)
       gtex_id <- id2tissue %>% filter(SMTSD %in% tissue) %>% pull(SAMPID)
       valid_id <- intersect(gtex_id, colnames(gtex_data))  #some samples are not use to rna-seq
-      if (valid_id > 3) {
+      if (length(valid_id) > 3) {
         gtex_normal <- gtex_data[, valid_id]
         gtex_normal <- log2(gtex_normal + 1)
         print(dim(gtex_normal))
@@ -183,7 +183,7 @@ tcga2gtex <- function(project=c("TCGA-LUSC"), data_dir="./GDCdata", num_tp=100, 
       }
       
       ##
-      if (length(valid_id) > 3 ){
+      if (length(valid_id) > 3){
         ###
         if (candidate %in% rownames(c.dataFilt)){
           if (length(target) > 0){
