@@ -126,6 +126,15 @@ tcga2gtex <- function(project=c("TCGA-LUSC"), data_dir="./GDCdata", num_tp=100, 
         if (is_log == FALSE){
           v.dataFilt <- log2(v.dataFilt + 1) #note convertCounts is log2(tpm), not log2(tpm+1)
         }
+        id2s <- as_tidytable(data.frame(rowData(dataPrep1))) %>% select(gene_id,gene_name) %>% mutate(gene_id = stringr::str_remove(gene_id, "\\..*"))
+        id2s <- id2s %>% filter(gene_id %in% rownames(v.dataFilt)) %>% distinct(gene_name, .keep_all = T)
+        v.dataFilt <- v.dataFilt[id2s$gene_id,] #filter the genes with redundancy gene names
+        #make sure the order
+        if (all(rownames(v.dataFilt) == id2s$gene_id)){
+          rownames(v.dataFilt) <- id2s$gene_name
+        } else {
+          print("Order is Wrong!!!")
+        }
         #taking log transformed data for exploration of batch effects
         #c.dataFilt <- TCGAbatch_Correction(tabDF = v.dataFilt, batch.factor="Plate", adjustment=c("TSS"), is_plot=FALSE)
         c.dataFilt <- v.dataFilt #初始化为voom转换矩阵，确保后续代码可以继续运行
