@@ -145,50 +145,54 @@ print(modified_string)
       tissue <- df_split %>% filter(project == p) %>% pull(GTEx_SMTSD)
       gtex_id <- id2tissue %>% filter(SMTSD %in% tissue) %>% pull(SAMPID)
       valid_id <- intersect(gtex_id, colnames(gtex_data))  #some samples are not use to rna-seq
-      gtex_normal <- gtex_data[, valid_id]
-      gtex_normal <- log2(gtex_normal + 1)
-      print(dim(gtex_normal))
-      # retrieve the genes in common between GEO and TCGA-LUAD datasets
-      gtex_normal <- gtex_normal[rownames(gtex_normal) %in% intersect(rownames(gtex_normal),rownames(c.dataFilt)),]
-      c.dataFilt <- c.dataFilt[rownames(c.dataFilt) %in% intersect(rownames(c.dataFilt),rownames(gtex_normal)),]
-      # merge the two counts matrices
-      countsTable <- cbind(c.dataFilt,gtex_normal[match(rownames(c.dataFilt), rownames(gtex_normal)),])
+      if (valid_id > 3) {
+        gtex_normal <- gtex_data[, valid_id]
+        gtex_normal <- log2(gtex_normal + 1)
+        print(dim(gtex_normal))
+        # retrieve the genes in common between GEO and TCGA-LUAD datasets
+        gtex_normal <- gtex_normal[rownames(gtex_normal) %in% intersect(rownames(gtex_normal),rownames(c.dataFilt)),]
+        c.dataFilt <- c.dataFilt[rownames(c.dataFilt) %in% intersect(rownames(c.dataFilt),rownames(gtex_normal)),]
+        # merge the two counts matrices
+        countsTable <- cbind(c.dataFilt,gtex_normal[match(rownames(c.dataFilt), rownames(gtex_normal)),])
 
-      #create dataframe with batch information
-      AnnotationCounts <- matrix(0,ncol(countsTable),3)
-      colnames(AnnotationCounts) <- c("Samples","Batch","Conditon")
-      rownames(AnnotationCounts) <- colnames(countsTable)
-      AnnotationCounts <- as.data.frame(AnnotationCounts)
-      AnnotationCounts$Samples <- colnames(countsTable)
-      AnnotationCounts[colnames(c.dataFilt),"Batch"] <- "TCGA"
-      AnnotationCounts[colnames(gtex_normal),"Batch"] <- "GTEX"
+        #create dataframe with batch information
+        AnnotationCounts <- matrix(0,ncol(countsTable),3)
+        colnames(AnnotationCounts) <- c("Samples","Batch","Conditon")
+        rownames(AnnotationCounts) <- colnames(countsTable)
+        AnnotationCounts <- as.data.frame(AnnotationCounts)
+        AnnotationCounts$Samples <- colnames(countsTable)
+        AnnotationCounts[colnames(c.dataFilt),"Batch"] <- "TCGA"
+        AnnotationCounts[colnames(gtex_normal),"Batch"] <- "GTEX"
 
-      if (length(dataSmNT_short) > 1){
-        AnnotationCounts[dataSmNT_short,"Condition"] <- "Normal"
-        }
-      AnnotationCounts[dataSmTP_short,"Condition"] <- "Tumor"
-      AnnotationCounts[colnames(gtex_normal),"Condition"] <- "Normal"
+        if (length(dataSmNT_short) > 1){
+          AnnotationCounts[dataSmNT_short,"Condition"] <- "Normal"
+          }
+        AnnotationCounts[dataSmTP_short,"Condition"] <- "Tumor"
+        AnnotationCounts[colnames(gtex_normal),"Condition"] <- "Normal"
 
-      #AnnotationCounts需要三列，Condition（协变量，可以理解成生物学条件）Batch（批次，这里主要指平台，tcga和gtex）Samples（样本id）
-      #############################
-      ###tgex
-      #############################
-      tryCatch({
-        c.dataFilt <- TCGAbatch_Correction(tabDF = countsTable,
-                                              UnpublishedData = TRUE, 
-                                              AnnotationDF = AnnotationCounts)
-        # c.dataFilt <- TCGAbatch_Correction(tabDF = v.dataFilt, batch.factor = "Plate", adjustment = "TSS", is_plot = FALSE)
-        }, error = function(e) {
-        #Catch and skip
-        message("TCGAbatch_Correction error", e$message)
-        message("Skip!")
-      })
-      print("Continue!")
-      ############################################################################
-      dataSmNT_short <- c(colnames(gtex_normal), dataSmNT_short) #Add 20250331
-      ############################################################################
+        #AnnotationCounts需要三列，Condition（协变量，可以理解成生物学条件）Batch（批次，这里主要指平台，tcga和gtex）Samples（样本id）
+        #############################
+        ###tgex
+        #############################
+        tryCatch({
+          c.dataFilt <- TCGAbatch_Correction(tabDF = countsTable,
+                                                UnpublishedData = TRUE, 
+                                                AnnotationDF = AnnotationCounts)
+          # c.dataFilt <- TCGAbatch_Correction(tabDF = v.dataFilt, batch.factor = "Plate", adjustment = "TSS", is_plot = FALSE)
+          }, error = function(e) {
+          #Catch and skip
+          message("TCGAbatch_Correction error", e$message)
+          message("Skip!")
+        })
+        print("Continue!")
+        ############################################################################
+        dataSmNT_short <- c(colnames(gtex_normal), dataSmNT_short) #Add 20250331
+        ############################################################################
+        
+      }
+      
       ##
-      if (nol(c.dataFilt) - length(dataSmTP_short) > 3 ){
+      if (length(valid_id) > 3 ){
         ###
         if (candidate %in% rownames(c.dataFilt)){
           if (length(target) > 0){
@@ -222,9 +226,9 @@ print(modified_string)
           geom_boxplot(outlier.shape = NA, alpha = 0.7) +  # 不显示异常值，使叠加更清晰
           geom_jitter(width = 0.2, aes(color = group), size = 2) +  # 叠加点，增加抖动防止重叠
           labs(
-            title = paste("Gene Expression of Cancer vs Normal Samples in", p, "\n", "\n", "\n", plegend),
+            title = paste("Gene Expression of Cancer vs Normal Samples with GTEx in", p, "\n", "\n", "\n", plegend),
             x = "Sample Group",
-            y = "Corrected Voom-transform Value"
+            y = "log2(TPM + 1)"
           ) +
           theme_minimal() +
           theme(plot.title = element_text(hjust = 0.5, size = 14))  # 隐藏图例（可选）
@@ -254,8 +258,8 @@ print(modified_string)
       tmp_mat <- as_tidytable(c.dataFilt, .keep_rownames = "gene_name")
       fwrite(tmp_mat, file.path("tmp", p, paste0(p,"_gtex_exp.csv")))
     
-      results[[paste0(p, "_exp")]] <- c.dataFilt
-      results[[paste0(p, "_deg")]] <- tmp_mat
+      results[[paste0(p, "_gtex_exp")]] <- c.dataFilt
+      results[[paste0(p, "_gtex_deg")]] <- tmp_mat
     
       }
     else {
