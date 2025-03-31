@@ -10,14 +10,29 @@ library(tidytable)
 library(ggplot2)
 library(dplyr)
 library(DGEobj.utils)
+library(readxl)
 
-mat2plot <- function(project=c("TCGA-LUSC"), data_dir="./GDCdata", num_tp=100, num_nt=100,tp_t="TP", tp_n="NT", 
-                     is_short=FALSE, save=TRUE, target=c("FAM135B"), candidate="FAM135B",voom=TRUE, is_log=FALSE, norm_method="none",
+tcga2gtex <- function(project=c("TCGA-LUSC"), data_dir="./GDCdata", num_tp=100, num_nt=100,tp_t="TP", tp_n="NT", 
+                     is_short=FALSE, save=TRUE, target=c("FAM135B"), candidate="FAM135B",voom=FALSE, is_log=FALSE, norm_method="none",
                      prior.count=0, unit="tpm"){
   if (file.exists("tmp") == FALSE){
     dir.create("tmp")
   }
   results <- list()
+
+  c2n <- readxl::read_xlsx("tcga2gtex.xlsx") #cancer to normal tissues
+  id2tissue <- fread("GTEx_Analysis_v10_Annotations_SampleAttributesDS.txt")
+  df_split <- c2n %>% separate_rows(GTEx_SMTSD, sep = ";") 
+  gtex_data <- fread("GTEx_Analysis_v10_RNASeQCv2.4.2_gene_tpm.gct", skip = 2, header = TRUE, sep = "\t") #check the path
+  gtex_data <- gtex_data %>% distinct(Description, .keep_all = T) #if by="Description", it will change the colnames to "by"
+  gtex_data <- data.frame(gtex_data); rownames(gtex_data) <- gtex_data$Description; gtex_data <- gtex_data[,-c(1,2)]
+  colnames(gtex_data) <- gsub("\\.", "-", colnames(gtex_data)) #colnames change after distinct()
+
+# 输出结果
+print(modified_string)
+
+  
+  
   #
   for (p in project){
     if (file.exists(file.path("tmp", p)) == FALSE){
@@ -123,6 +138,61 @@ mat2plot <- function(project=c("TCGA-LUSC"), data_dir="./GDCdata", num_tp=100, n
         #c.dataFilt <- TCGAbatch_Correction(tabDF = v.dataFilt, batch.factor="Plate", adjustment=c("TSS"), is_plot=FALSE)
         c.dataFilt <- v.dataFilt #初始化为voom转换矩阵，确保后续代码可以继续运行
       }
+      
+      #############################
+      ###tgex
+      #############################
+      tissue <- df_split %>% filter(project == p) %>% pull(GTEx_SMTSD)
+      gtex_id <- id2tissue %>% filter(SMTSD %in% tissue) %>% pull(SAMPID)
+      valid_id <- intersect(gtex_id, colnames(gtex_data))  #some samples are not use to rna-seq
+      gtex_normal <- gtex_data[, valid_id]
+      gtex_normal <- log2(gtex_normal + 1)
+      print(dim(gtex_normal))
+      # retrieve the genes in common between GEO and TCGA-LUAD datasets
+      gtex_normal <- gtex_normal[rownames(gtex_normal) %in% intersect(rownames(gtex_normal),rownames(c.dataFilt)),]
+      c.dataFilt <- c.dataFilt[rownames(c.dataFilt) %in% intersect(rownames(c.dataFilt),rownames(gtex_normal)),]
+      # merge the two counts matrices
+      countsTable <- cbind(c.dataFilt,gtex_normal[match(rownames(c.dataFilt), rownames(gtex_normal)),])
+
+      #create dataframe with batch information
+      AnnotationCounts <- matrix(0,ncol(countsTable),3)
+      colnames(AnnotationCounts) <- c("Samples","Batch","Conditon")
+      rownames(AnnotationCounts) <- colnames(countsTable)
+      AnnotationCounts <- as.data.frame(AnnotationCounts)
+      AnnotationCounts$Samples <- colnames(countsTable)
+      AnnotationCounts[colnames(c.dataFilt),"Batch"] <- "TCGA"
+      AnnotationCounts[colnames(gtex_normal),"Batch"] <- "GTEX"
+
+      AnnotationCounts[dataSmNT_short,"Condition"] <- "Normal"
+      AnnotationCounts[dataSmTP_short,"Condition"] <- "Tumor"
+      AnnotationCounts[colnames(gtex_normal),"Condition"] <- "Normal"
+
+      #AnnotationCounts需要三列，Condition（协变量，可以理解成生物学条件）Batch（批次，这里主要指平台，tcga和gtex）Samples（样本id）
+      countsCorrected <- TCGAbatch_Correction(tabDF = countsTable,
+                                              UnpublishedData = TRUE, 
+                                              AnnotationDF = AnnotationCounts)
+      
+      
+      
+      
+
+
+
+      
+      
+      
+
+
+
+      #############################
+      ###tgex
+      #############################
+      
+
+
+      
+
+
       
       tryCatch({
         c.dataFilt <- TCGAbatch_Correction(tabDF = v.dataFilt, batch.factor = "Plate", adjustment = "TSS", is_plot = FALSE)
