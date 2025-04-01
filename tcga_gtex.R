@@ -12,9 +12,29 @@ library(dplyr)
 library(DGEobj.utils)
 library(readxl)
 
+data_pre <- function(df, cut=0.25, is_filt=TRUE){
+  dataNorm <- TCGAanalyze_Normalization(tabDF = df,
+                                        geneInfo = geneInfoHT,
+                                        method = "gcContent")
+  dataNorm <- TCGAanalyze_Normalization(tabDF = dataNorm,
+                                        geneInfo = geneInfoHT,
+                                        method = "geneLength")
+    
+  #quantile filtering to remove genes with low count
+  if (is_filt){
+    dataFilt <- TCGAanalyze_Filtering(tabDF = dataNorm,
+                                          method = "quantile", 
+                                          qnt.cut = cut)
+  } else {
+    dataFilt <- dataNorm
+  }
+  return(dataFilt)
+}
+
+
 tcga2gtex <- function(project=c("TCGA-LUSC"), data_dir="./GDCdata", num_tp=100, num_nt=100,tp_t="TP", tp_n="NT", 
                      is_short=FALSE, save=TRUE, target=c("FAM135B"), candidate="FAM135B",voom=FALSE, is_log=FALSE, norm_method="none",
-                     prior.count=0, unit="tpm"){
+                     prior.count=0, unit="tpm",cut=0.25, is_filt=TRUE){
   if (file.exists("tmp") == FALSE){
     dir.create("tmp")
   }
@@ -23,7 +43,12 @@ tcga2gtex <- function(project=c("TCGA-LUSC"), data_dir="./GDCdata", num_tp=100, 
   c2n <- readxl::read_xlsx("tcga2gtex.xlsx") #cancer to normal tissues
   id2tissue <- fread("GTEx_Analysis_v10_Annotations_SampleAttributesDS.txt")
   df_split <- c2n %>% separate_rows(GTEx_SMTSD, sep = ";") 
-  gtex_data <- fread("GTEx_Analysis_v10_RNASeQCv2.4.2_gene_tpm.gct", skip = 2, header = TRUE, sep = "\t") #check the path
+  if (voom){
+    gtex_data <- fread("GTEx_Analysis_v10_RNASeQCv2.4.2_gene_reads.gct", skip = 2, header = TRUE, sep = "\t") #check the path
+  } else {
+    gtex_data <- fread("GTEx_Analysis_v10_RNASeQCv2.4.2_gene_tpm.gct", skip = 2, header = TRUE, sep = "\t") #check the path
+  }
+  
   gtex_data <- gtex_data %>% distinct(Description, .keep_all = T) #if by="Description", it will change the colnames to "by"
   gtex_data <- data.frame(gtex_data); rownames(gtex_data) <- gtex_data$Description; gtex_data <- gtex_data[,-c(1,2)]
   colnames(gtex_data) <- gsub("\\.", "-", colnames(gtex_data)) #colnames change after distinct()
@@ -82,18 +107,7 @@ tcga2gtex <- function(project=c("TCGA-LUSC"), data_dir="./GDCdata", num_tp=100, 
                                             cor.cut = 0.6,)
       if (voom) {
         #step with library size and gcContent normalization using EDASeq
-        dataNorm <- TCGAanalyze_Normalization(tabDF = dataPrep,
-                                              geneInfo = geneInfoHT,
-                                              method = "gcContent")
-        dataNorm <- TCGAanalyze_Normalization(tabDF = dataPrep,
-                                              geneInfo = geneInfoHT,
-                                              method = "geneLength")
-    
-        #quantile filtering to remove genes with low count
-        dataFilt <- TCGAanalyze_Filtering(tabDF = dataNorm,
-                                          method = "quantile", 
-                                          qnt.cut =  0.25)
-
+        dataFilt <- data_pre(df=dataPre, is_filt=is_filt, cut=cut)
         id2s <- as_tidytable(data.frame(rowData(dataPrep1))) %>% select(gene_id,gene_name) %>% mutate(gene_id = stringr::str_remove(gene_id, "\\..*"))
         id2s <- id2s %>% filter(gene_id %in% rownames(dataFilt)) %>% distinct(gene_name, .keep_all = T)
         dataFilt <- dataFilt[id2s$gene_id,] #filter the genes with redundancy gene names
@@ -148,7 +162,16 @@ tcga2gtex <- function(project=c("TCGA-LUSC"), data_dir="./GDCdata", num_tp=100, 
       valid_id <- intersect(gtex_id, colnames(gtex_data))  #some samples are not use to rna-seq
       if (length(valid_id) > 3) {
         gtex_normal <- gtex_data[, valid_id]
-        gtex_normal <- log2(gtex_normal + 1)
+        if (voom) {
+          gtex_normal <- data_pre(df=gtex_normal, is_filt=is_filt, cut=cut)
+          #voom transformation of the data (log)
+          gtex_normal <- voom(gtex_normal)
+          #taking log transformed data for exploration of batch effects
+          gtex_normal <- gtex_normal$E #初始化为voom转换矩阵，确保后续代码可以继续运行
+        } else {
+          gtex_normal <- log2(gtex_normal + 1)
+        }
+        
         print(dim(gtex_normal))
         # retrieve the genes in common between GEO and TCGA-LUAD datasets
         gtex_normal <- gtex_normal[rownames(gtex_normal) %in% intersect(rownames(gtex_normal),rownames(c.dataFilt)),]
@@ -227,7 +250,7 @@ tcga2gtex <- function(project=c("TCGA-LUSC"), data_dir="./GDCdata", num_tp=100, 
           labs(
             title = paste("Gene Expression of Cancer vs Normal Samples with GTEx in", p, "\n", "\n", "\n", plegend),
             x = "Sample Group",
-            y = "log2(TPM + 1)"
+            y = ifelse(voom, "Corrected Voom-transform Value", "log2(TPM + 1)")
           ) +
           theme_minimal() +
           theme(plot.title = element_text(hjust = 0.5, size = 14))  # 隐藏图例（可选）
