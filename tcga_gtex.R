@@ -293,4 +293,4 @@ tcga2gtex <- function(project=c("TCGA-LUSC"), data_dir="./GDCdata", num_tp=100, 
 #linshi <- mat2plot(data_dir = "../GDCdata/", is_short = TRUE)
 #project=c("TCGA-LUSC"); data_dir="../GDCdata"; num_tp=100; num_nt=100;tp_t="TP"; tp_n="NT"; 
 #is_short=TRUE; save=TRUE; target=c("FAM135B"); candidate="FAM135B";p=project[1]
-#voom=TRUE; is_log=FALSE; norm_method="none";prior.count=0; unit="tpm"
+#is_voom=TRUE; is_log=FALSE; norm_method="none";prior.count=0; unit="tpm"
