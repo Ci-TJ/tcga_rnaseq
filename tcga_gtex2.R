@@ -27,7 +27,7 @@ tcga2gtex <- function(project=c("TCGA-LUSC"), data_dir="./GDCdata", num_tp=100, 
   gtex_data <- gtex_data %>% distinct(Description, .keep_all = T) #if by="Description", it will change the colnames to "by"
   gtex_data <- data.frame(gtex_data); rownames(gtex_data) <- gtex_data$Description; gtex_data <- gtex_data[,-c(1,2)]
   colnames(gtex_data) <- gsub("\\.", "-", colnames(gtex_data)) #colnames change after distinct()
-
+  
   #
   for (p in project){
     if (file.exists(file.path("tmp", p)) == FALSE){
@@ -55,7 +55,7 @@ tcga2gtex <- function(project=c("TCGA-LUSC"), data_dir="./GDCdata", num_tp=100, 
                                 data.type = "Gene Expression Quantification", 
                                 workflow.type = "STAR - Counts", 
                                 barcode = c(dataSmTP_short, dataSmNT_short))
-          } else {
+        } else {
           dataSmTP_short <- dataSmTP[1:length(dataSmTP)]
           dataSmNT_short <- dataSmNT[1:length(dataSmNT)]
           queryDown <- GDCquery(project = p, 
@@ -63,8 +63,8 @@ tcga2gtex <- function(project=c("TCGA-LUSC"), data_dir="./GDCdata", num_tp=100, 
                                 data.type = "Gene Expression Quantification", 
                                 workflow.type = "STAR - Counts", 
                                 barcode = c(dataSmTP_short, dataSmNT_short))
-          }
-        } else {
+        }
+      } else {
         dataSmTP_short <- dataSmTP
         dataSmNT_short <- dataSmNT
         queryDown <- GDCquery(project = p, 
@@ -72,7 +72,7 @@ tcga2gtex <- function(project=c("TCGA-LUSC"), data_dir="./GDCdata", num_tp=100, 
                               data.type = "Gene Expression Quantification", 
                               workflow.type = "STAR - Counts", 
                               barcode = c(dataSmTP_short, dataSmNT_short))
-        }
+      }
     
       dataPrep1 <- GDCprepare(query = queryDown, directory = data_dir, save = save, save.filename = file.path("tmp", p, paste0(p,"_gtex.rda")))
       
@@ -100,19 +100,19 @@ tcga2gtex <- function(project=c("TCGA-LUSC"), data_dir="./GDCdata", num_tp=100, 
         #make sure the order
         if (all(rownames(dataFilt) == id2s$gene_id)){
           rownames(dataFilt) <- id2s$gene_name
-          } else {
+        } else {
           print("Order is Wrong!!!")
-          }
+        }
 
         #voom transformation of the data (log)
         v.dataFilt<-voom(dataFilt)
         #taking log transformed data for exploration of batch effects
         #c.dataFilt <- TCGAbatch_Correction(tabDF = v.dataFilt, batch.factor="Plate", adjustment=c("TSS"), is_plot=FALSE)
         c.dataFilt <- v.dataFilt$E #初始化为voom转换矩阵，确保后续代码可以继续运行
-        } else {
-        rownames(dataPre) <- gsub("[.].*", "",rownames(dataPrep))
+      } else {
+        rownames(dataPrep) <- gsub("[.].*", "",rownames(dataPrep))
         ss <- intersect(rownames(dataPrep), rownames(geneInfoHT))
-        dataNorm <- dataPre[ss,]
+        dataNorm <- dataPrep[ss,]
         len_info <- geneInfoHT[ss,]$geneLength
         v.dataFilt <- convertCounts(
           countsMatrix = dataNorm,
@@ -122,13 +122,23 @@ tcga2gtex <- function(project=c("TCGA-LUSC"), data_dir="./GDCdata", num_tp=100, 
           normalize  = norm_method,
           prior.count = prior.count #note prior.count=1 ！= log2(tpm + prior.count), prior.count=1 but not recemmend for DE analysis!
         )
+        
         if (is_log == FALSE){
           v.dataFilt <- log2(v.dataFilt + 1) #note convertCounts is log2(tpm), not log2(tpm+1)
-          }
+        }
+        id2s <- as_tidytable(data.frame(rowData(dataPrep1))) %>% select(gene_id,gene_name) %>% mutate(gene_id = stringr::str_remove(gene_id, "\\..*"))
+        id2s <- id2s %>% filter(gene_id %in% rownames(v.dataFilt)) %>% distinct(gene_name, .keep_all = T)
+        v.dataFilt <- v.dataFilt[id2s$gene_id,] #filter the genes with redundancy gene names
+        #make sure the order
+        if (all(rownames(v.dataFilt) == id2s$gene_id)){
+          rownames(v.dataFilt) <- id2s$gene_name
+        } else {
+          print("Order is Wrong!!!")
+        }
         #taking log transformed data for exploration of batch effects
         #c.dataFilt <- TCGAbatch_Correction(tabDF = v.dataFilt, batch.factor="Plate", adjustment=c("TSS"), is_plot=FALSE)
         c.dataFilt <- v.dataFilt #初始化为voom转换矩阵，确保后续代码可以继续运行
-        }
+      }
       
       #############################
       ###tgex
@@ -136,7 +146,7 @@ tcga2gtex <- function(project=c("TCGA-LUSC"), data_dir="./GDCdata", num_tp=100, 
       tissue <- df_split %>% filter(project == p) %>% pull(GTEx_SMTSD)
       gtex_id <- id2tissue %>% filter(SMTSD %in% tissue) %>% pull(SAMPID)
       valid_id <- intersect(gtex_id, colnames(gtex_data))  #some samples are not use to rna-seq
-      if (valid_id > 3) {
+      if (length(valid_id) > 3) {
         gtex_normal <- gtex_data[, valid_id]
         gtex_normal <- log2(gtex_normal + 1)
         print(dim(gtex_normal))
@@ -157,7 +167,7 @@ tcga2gtex <- function(project=c("TCGA-LUSC"), data_dir="./GDCdata", num_tp=100, 
 
         if (length(dataSmNT_short) > 1){
           AnnotationCounts[dataSmNT_short,"Condition"] <- "Normal"
-          }
+        }
         AnnotationCounts[dataSmTP_short,"Condition"] <- "Tumor"
         AnnotationCounts[colnames(gtex_normal),"Condition"] <- "Normal"
 
@@ -179,17 +189,17 @@ tcga2gtex <- function(project=c("TCGA-LUSC"), data_dir="./GDCdata", num_tp=100, 
         ############################################################################
         dataSmNT_short <- c(colnames(gtex_normal), dataSmNT_short) #Add 20250331
         ############################################################################
-        }
+      }
       
       ##
-      if (length(valid_id) > 3 ){
+      if (length(valid_id) > 3){
         ###
         if (candidate %in% rownames(c.dataFilt)){
           if (length(target) > 0){
             select_row = c(rownames(c.dataFilt)[1:2], target)
           } else {
             select_row = rownames(c.dataFilt)
-            }
+          }
           DEG <- TCGAanalyze_DEA(
             #add c(rownames(c.dataFilt)[1:2], target) avoid wrong of data format
             mat1=c.dataFilt[select_row, dataSmNT_short], 
@@ -226,7 +236,7 @@ tcga2gtex <- function(project=c("TCGA-LUSC"), data_dir="./GDCdata", num_tp=100, 
           if (length(target) > 1){
               select_row = c(rownames(c.dataFilt)[1:2], target)
           } else {
-              select_row = rownames(c.dataFilt)
+            select_row = rownames(c.dataFilt)
           }
           DEG <- TCGAanalyze_DEA(
             mat1=c.dataFilt[select_row, dataSmNT_short], 
@@ -238,6 +248,7 @@ tcga2gtex <- function(project=c("TCGA-LUSC"), data_dir="./GDCdata", num_tp=100, 
         }
       
         fwrite(as_tidytable(DEG, .keep_rownames = "gene_name"), file.path("tmp", p, paste0(p,"_gtex_deg.csv")))
+        ##
       } else {
         print(paste(p, "It doesn't have enough normal samples!"))
       }
@@ -247,14 +258,13 @@ tcga2gtex <- function(project=c("TCGA-LUSC"), data_dir="./GDCdata", num_tp=100, 
       results[[paste0(p, "_gtex_exp")]] <- c.dataFilt
       results[[paste0(p, "_gtex_deg")]] <- tmp_mat
     
-      }
-    else {
+    } else {
       print(paste(p, "is OK!"))
-      }
+    }
         
-    } #for end
-    return(results)
-  }
+  } #for end
+  return(results)
+}
 #test
 #linshi <- mat2plot(data_dir = "../GDCdata/", is_short = TRUE)
 #project=c("TCGA-LUSC"); data_dir="../GDCdata"; num_tp=100; num_nt=100;tp_t="TP"; tp_n="NT"; 
