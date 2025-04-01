@@ -276,6 +276,7 @@ tcga2gtex <- function(project=c("TCGA-LUSC"), data_dir="./GDCdata", num_tp=100, 
         print(paste(p, "It doesn't have enough normal samples!"))
       }
       tmp_mat <- as_tidytable(c.dataFilt, .keep_rownames = "gene_name")
+      tmp_mat <- tmp_mat %>% filter(gene_name %in% tmp_mat$gene_name[grep("FAM135", tmp_mat$gene_name)]) #Add to avoid big output
       fwrite(tmp_mat, file.path("tmp", p, paste0(p,"_gtex_exp.csv")))
     
       results[[paste0(p, "_gtex_exp")]] <- c.dataFilt
