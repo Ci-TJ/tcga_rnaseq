@@ -107,7 +107,7 @@ tcga2gtex <- function(project=c("TCGA-LUSC"), data_dir="./GDCdata", num_tp=100, 
                                             cor.cut = 0.6,)
       if (voom) {
         #step with library size and gcContent normalization using EDASeq
-        dataFilt <- data_pre(df=dataPre, is_filt=is_filt, cut=cut)
+        dataFilt <- data_pre(df=dataPrep, is_filt=is_filt, cut=cut)
         id2s <- as_tidytable(data.frame(rowData(dataPrep1))) %>% select(gene_id,gene_name) %>% mutate(gene_id = stringr::str_remove(gene_id, "\\..*"))
         id2s <- id2s %>% filter(gene_id %in% rownames(dataFilt)) %>% distinct(gene_name, .keep_all = T)
         dataFilt <- dataFilt[id2s$gene_id,] #filter the genes with redundancy gene names
