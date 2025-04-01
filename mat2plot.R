@@ -228,8 +228,8 @@ mat2plot <- function(project=c("TCGA-LUSC"), data_dir="./GDCdata", num_tp=100, n
             Cond2type = "Tumor",
             method = "glmLRT")
         }
-      
-        fwrite(as_tidytable(DEG, .keep_rownames = "gene_name"), file.path("tmp", p, paste0(p,"_deg.csv")))
+         fwrite(as_tidytable(DEG, .keep_rownames = "gene_name"), file.path("tmp", p, paste0(p,"_deg.csv")))
+         results[[paste0(p, "_deg")]] <- DEG
         ##
       } else {
         print(paste(p, "It doesn't have enough normal samples!"))
@@ -239,7 +239,6 @@ mat2plot <- function(project=c("TCGA-LUSC"), data_dir="./GDCdata", num_tp=100, n
       fwrite(tmp_mat, file.path("tmp", p, paste0(p,"_exp.csv")))
     
       results[[paste0(p, "_exp")]] <- tmp_mat
-      results[[paste0(p, "_deg")]] <- DEG
     
     } else {
       print(paste(p, "is OK!"))
