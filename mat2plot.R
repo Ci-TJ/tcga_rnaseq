@@ -11,9 +11,28 @@ library(ggplot2)
 library(dplyr)
 library(DGEobj.utils)
 
+data_pre <- function(df, cut=0.25, is_filt=TRUE){
+   dataNorm <- TCGAanalyze_Normalization(tabDF = df,
+                                         geneInfo = geneInfoHT,
+                                         method = "gcContent")
+   dataNorm <- TCGAanalyze_Normalization(tabDF = dataNorm,
+                                         geneInfo = geneInfoHT,
+                                         method = "geneLength")
+     
+   #quantile filtering to remove genes with low count
+   if (is_filt){
+     dataFilt <- TCGAanalyze_Filtering(tabDF = dataNorm,
+                                           method = "quantile", 
+                                           qnt.cut = cut)
+   } else {
+     dataFilt <- dataNorm
+   }
+   return(dataFilt)
+ }
+
 mat2plot <- function(project=c("TCGA-LUSC"), data_dir="./GDCdata", num_tp=100, num_nt=100,tp_t="TP", tp_n="NT", 
                      is_short=FALSE, save=TRUE, target=c("FAM135B"), candidate="FAM135B",voom=TRUE, is_log=FALSE, norm_method="none",
-                     prior.count=0, unit="tpm"){
+                     prior.count=0, unit="tpm", cut=0.25, is_filt=TRUE){
   if (file.exists("tmp") == FALSE){
     dir.create("tmp")
   }
@@ -72,17 +91,7 @@ mat2plot <- function(project=c("TCGA-LUSC"), data_dir="./GDCdata", num_tp=100, n
                                             cor.cut = 0.6,)
       if (voom) {
         #step with library size and gcContent normalization using EDASeq
-        dataNorm <- TCGAanalyze_Normalization(tabDF = dataPrep,
-                                              geneInfo = geneInfoHT,
-                                              method = "gcContent")
-        dataNorm <- TCGAanalyze_Normalization(tabDF = dataPrep,
-                                              geneInfo = geneInfoHT,
-                                              method = "geneLength")
-    
-        #quantile filtering to remove genes with low count
-        dataFilt <- TCGAanalyze_Filtering(tabDF = dataNorm,
-                                          method = "quantile", 
-                                          qnt.cut =  0.25)
+        dataFilt <- data_pre(df=dataPre, is_filt=is_filt, cut=cut)
 
         id2s <- as_tidytable(data.frame(rowData(dataPrep1))) %>% select(gene_id,gene_name) %>% mutate(gene_id = stringr::str_remove(gene_id, "\\..*"))
         id2s <- id2s %>% filter(gene_id %in% rownames(dataFilt)) %>% distinct(gene_name, .keep_all = T)
@@ -198,7 +207,7 @@ mat2plot <- function(project=c("TCGA-LUSC"), data_dir="./GDCdata", num_tp=100, n
           labs(
             title = paste("Gene Expression of Cancer vs Normal Samples in", p, "\n", "\n", "\n", plegend),
             x = "Sample Group",
-            y = "Corrected Voom-transform Value"
+            y = ifelse(voom, "Corrected Voom-transform Value", "log2(TPM + 1)")
           ) +
           theme_minimal() +
           theme(plot.title = element_text(hjust = 0.5, size = 14))  # 隐藏图例（可选）
