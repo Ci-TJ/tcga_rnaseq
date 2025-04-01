@@ -31,7 +31,7 @@ data_pre <- function(df, cut=0.25, is_filt=TRUE){
  }
 
 mat2plot <- function(project=c("TCGA-LUSC"), data_dir="./GDCdata", num_tp=100, num_nt=100,tp_t="TP", tp_n="NT", 
-                     is_short=FALSE, save=TRUE, target=c("FAM135B"), candidate="FAM135B",voom=TRUE, is_log=FALSE, norm_method="none",
+                     is_short=FALSE, save=TRUE, target=c("FAM135B"), candidate="FAM135B",is_voom=TRUE, is_log=FALSE, norm_method="none",
                      prior.count=0, unit="tpm", cut=0.25, is_filt=TRUE){
   if (file.exists("tmp") == FALSE){
     dir.create("tmp")
@@ -89,7 +89,7 @@ mat2plot <- function(project=c("TCGA-LUSC"), data_dir="./GDCdata", num_tp=100, n
       #rownames(dataPrep1) <- rowData(dataPrep1)$gene_name #transfer to gene names
       dataPrep <- TCGAanalyze_Preprocessing(object = dataPrep1, 
                                             cor.cut = 0.6,)
-      if (voom) {
+      if (is_voom) {
         #step with library size and gcContent normalization using EDASeq
         dataFilt <- data_pre(df=dataPrep, is_filt=is_filt, cut=cut)
 
@@ -207,7 +207,7 @@ mat2plot <- function(project=c("TCGA-LUSC"), data_dir="./GDCdata", num_tp=100, n
           labs(
             title = paste("Gene Expression of Cancer vs Normal Samples in", p, "\n", "\n", "\n", plegend),
             x = "Sample Group",
-            y = ifelse(voom, "Corrected Voom-transform Value", "log2(TPM + 1)")
+            y = ifelse(is_voom, "Corrected Voom-transform Value", "log2(TPM + 1)")
           ) +
           theme_minimal() +
           theme(plot.title = element_text(hjust = 0.5, size = 14))  # 隐藏图例（可选）
@@ -253,7 +253,7 @@ mat2plot <- function(project=c("TCGA-LUSC"), data_dir="./GDCdata", num_tp=100, n
 #linshi <- mat2plot(data_dir = "../GDCdata/", is_short = TRUE)
 #project=c("TCGA-LUSC"); data_dir="../GDCdata"; num_tp=100; num_nt=100;tp_t="TP"; tp_n="NT"; 
 #is_short=TRUE; save=TRUE; target=c("FAM135B"); candidate="FAM135B";p=project[1]
-#voom=TRUE; is_log=FALSE; norm_method="none";prior.count=0; unit="tpm"
+#is_voom=TRUE; is_log=FALSE; norm_method="none";prior.count=0; unit="tpm"
     
 
                             
