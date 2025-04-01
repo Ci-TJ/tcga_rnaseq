@@ -238,8 +238,8 @@ mat2plot <- function(project=c("TCGA-LUSC"), data_dir="./GDCdata", num_tp=100, n
       tmp_mat <- as_tidytable(c.dataFilt, .keep_rownames = "gene_name")
       fwrite(tmp_mat, file.path("tmp", p, paste0(p,"_exp.csv")))
     
-      results[[paste0(p, "_exp")]] <- c.dataFilt
-      results[[paste0(p, "_deg")]] <- tmp_mat
+      results[[paste0(p, "_exp")]] <- tmp_mat
+      results[[paste0(p, "_deg")]] <- DEG
     
     } else {
       print(paste(p, "is OK!"))
