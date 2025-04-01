@@ -174,7 +174,7 @@ tcga2gtex <- function(project=c("TCGA-LUSC"), data_dir="./GDCdata", num_tp=100, 
           rownames(gtex_normal) <- gsub("[.].*", "",rownames(gtex_normal))
         }
         ugid2s <- gid2s %>% filter(gene_id %in% rownames(gtex_normal))
-        gtex_normal <- gtex_normal[hh$gene_id,]; rownames(gtex_normal) <- ugid2s$Description
+        gtex_normal <- gtex_normal[ugid2s$gene_id,]; rownames(gtex_normal) <- ugid2s$Description
         print(dim(gtex_normal))
         # retrieve the genes in common between GEO and TCGA-LUAD datasets
         gtex_normal <- gtex_normal[rownames(gtex_normal)[rownames(gtex_normal) %in% intersect(rownames(gtex_normal),rownames(c.dataFilt))],]
@@ -282,8 +282,8 @@ tcga2gtex <- function(project=c("TCGA-LUSC"), data_dir="./GDCdata", num_tp=100, 
       tmp_mat <- tmp_mat %>% filter(gene_name %in% tmp_mat$gene_name[grep("FAM135", tmp_mat$gene_name)]) #Add to avoid big output
       fwrite(tmp_mat, file.path("tmp", p, paste0(p,"_gtex_exp.csv")))
     
-      results[[paste0(p, "_gtex_exp")]] <- c.dataFilt
-      results[[paste0(p, "_gtex_deg")]] <- tmp_mat
+      results[[paste0(p, "_gtex_exp")]] <- tmp_mat
+      results[[paste0(p, "_gtex_deg")]] <- DEG
     
     } else {
       print(paste(p, "is OK!"))
