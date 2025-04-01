@@ -33,7 +33,7 @@ data_pre <- function(df, cut=0.25, is_filt=TRUE){
 
 
 tcga2gtex <- function(project=c("TCGA-LUSC"), data_dir="./GDCdata", num_tp=100, num_nt=100,tp_t="TP", tp_n="NT", 
-                     is_short=FALSE, save=TRUE, target=c("FAM135B"), candidate="FAM135B",voom=FALSE, is_log=FALSE, norm_method="none",
+                     is_short=FALSE, save=TRUE, target=c("FAM135B"), candidate="FAM135B",is_voom=TRUE, is_log=FALSE, norm_method="none",
                      prior.count=0, unit="tpm",cut=0.25, is_filt=TRUE){
   if (file.exists("tmp") == FALSE){
     dir.create("tmp")
@@ -43,7 +43,7 @@ tcga2gtex <- function(project=c("TCGA-LUSC"), data_dir="./GDCdata", num_tp=100, 
   c2n <- readxl::read_xlsx("tcga2gtex.xlsx") #cancer to normal tissues
   id2tissue <- fread("GTEx_Analysis_v10_Annotations_SampleAttributesDS.txt")
   df_split <- c2n %>% separate_rows(GTEx_SMTSD, sep = ";") 
-  if (voom){
+  if (is_voom){
     gtex_data <- fread("GTEx_Analysis_v10_RNASeQCv2.4.2_gene_reads.gct", skip = 2, header = TRUE, sep = "\t") #check the path
   } else {
     gtex_data <- fread("GTEx_Analysis_v10_RNASeQCv2.4.2_gene_tpm.gct", skip = 2, header = TRUE, sep = "\t") #check the path
@@ -105,7 +105,7 @@ tcga2gtex <- function(project=c("TCGA-LUSC"), data_dir="./GDCdata", num_tp=100, 
       #rownames(dataPrep1) <- rowData(dataPrep1)$gene_name #transfer to gene names
       dataPrep <- TCGAanalyze_Preprocessing(object = dataPrep1, 
                                             cor.cut = 0.6,)
-      if (voom) {
+      if (is_voom) {
         #step with library size and gcContent normalization using EDASeq
         dataFilt <- data_pre(df=dataPrep, is_filt=is_filt, cut=cut)
         id2s <- as_tidytable(data.frame(rowData(dataPrep1))) %>% select(gene_id,gene_name) %>% mutate(gene_id = stringr::str_remove(gene_id, "\\..*"))
@@ -162,7 +162,7 @@ tcga2gtex <- function(project=c("TCGA-LUSC"), data_dir="./GDCdata", num_tp=100, 
       valid_id <- intersect(gtex_id, colnames(gtex_data))  #some samples are not use to rna-seq
       if (length(valid_id) > 3) {
         gtex_normal <- gtex_data[, valid_id]
-        if (voom) {
+        if (is_voom) {
           gtex_normal <- data_pre(df=gtex_normal, is_filt=is_filt, cut=cut)
           #voom transformation of the data (log)
           gtex_normal <- voom(gtex_normal)
@@ -250,7 +250,7 @@ tcga2gtex <- function(project=c("TCGA-LUSC"), data_dir="./GDCdata", num_tp=100, 
           labs(
             title = paste("Gene Expression of Cancer vs Normal Samples with GTEx in", p, "\n", "\n", "\n", plegend),
             x = "Sample Group",
-            y = ifelse(voom, "Corrected Voom-transform Value", "log2(TPM + 1)")
+            y = ifelse(is_voom, "Corrected Voom-transform Value", "log2(TPM + 1)")
           ) +
           theme_minimal() +
           theme(plot.title = element_text(hjust = 0.5, size = 14))  # 隐藏图例（可选）
