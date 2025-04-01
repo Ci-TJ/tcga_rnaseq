@@ -44,13 +44,14 @@ tcga2gtex <- function(project=c("TCGA-LUSC"), data_dir="./GDCdata", num_tp=100, 
   id2tissue <- fread("GTEx_Analysis_v10_Annotations_SampleAttributesDS.txt")
   df_split <- c2n %>% separate_rows(GTEx_SMTSD, sep = ";") 
   if (is_voom){
-    gtex_data <- fread("GTEx_Analysis_v10_RNASeQCv2.4.2_gene_reads.gct", skip = 2, header = TRUE, sep = "\t") #check the path
+    g0 <- fread("GTEx_Analysis_v10_RNASeQCv2.4.2_gene_reads.gct", skip = 2, header = TRUE, sep = "\t") #check the path
   } else {
-    gtex_data <- fread("GTEx_Analysis_v10_RNASeQCv2.4.2_gene_tpm.gct", skip = 2, header = TRUE, sep = "\t") #check the path
+    g0 <- fread("GTEx_Analysis_v10_RNASeQCv2.4.2_gene_tpm.gct", skip = 2, header = TRUE, sep = "\t") #check the path
   }
   
-  gtex_data <- gtex_data %>% distinct(Description, .keep_all = T) #if by="Description", it will change the colnames to "by"
-  gtex_data <- data.frame(gtex_data); rownames(gtex_data) <- gtex_data$Description; gtex_data <- gtex_data[,-c(1,2)]
+  gid2s <- g0 %>% select(Name, Description) %>% distinct(Description, .keep_all = T) #if by="Description", it will change the colnames to "by"
+  gid2s$gene_id <- gsub("[.].*", "", gid2s$Name)
+  gtex_data <- data.frame(g0); rownames(gtex_data) <- g0$Name; gtex_data <- gtex_data[,-c(1,2)] #Note TCGAanalyze_Normalization need gene_id not gene_name
   colnames(gtex_data) <- gsub("\\.", "-", colnames(gtex_data)) #colnames change after distinct()
   
   #
@@ -170,18 +171,20 @@ tcga2gtex <- function(project=c("TCGA-LUSC"), data_dir="./GDCdata", num_tp=100, 
           gtex_normal <- gtex_normal$E #初始化为voom转换矩阵，确保后续代码可以继续运行
         } else {
           gtex_normal <- log2(gtex_normal + 1)
+          rownames(gtex_normal) <- gsub("[.].*", "",rownames(gtex_normal))
         }
-        
+        ugid2s <- gid2s %>% filter(gene_id %in% rownames(gtex_normal))
+        gtex_normal <- gtex_normal[hh$gene_id,]; rownames(gtex_normal) <- ugid2s$Description
         print(dim(gtex_normal))
         # retrieve the genes in common between GEO and TCGA-LUAD datasets
-        gtex_normal <- gtex_normal[rownames(gtex_normal) %in% intersect(rownames(gtex_normal),rownames(c.dataFilt)),]
-        c.dataFilt <- c.dataFilt[rownames(c.dataFilt) %in% intersect(rownames(c.dataFilt),rownames(gtex_normal)),]
+        gtex_normal <- gtex_normal[rownames(gtex_normal)[rownames(gtex_normal) %in% intersect(rownames(gtex_normal),rownames(c.dataFilt))],]
+        c.dataFilt <- c.dataFilt[rownames(c.dataFilt)[rownames(c.dataFilt) %in% intersect(rownames(c.dataFilt),rownames(gtex_normal))],]
         # merge the two counts matrices
         countsTable <- cbind(c.dataFilt,gtex_normal[match(rownames(c.dataFilt), rownames(gtex_normal)),])
 
         #create dataframe with batch information
         AnnotationCounts <- matrix(0,ncol(countsTable),3)
-        colnames(AnnotationCounts) <- c("Samples","Batch","Conditon")
+        colnames(AnnotationCounts) <- c("Samples","Batch","Condition")
         rownames(AnnotationCounts) <- colnames(countsTable)
         AnnotationCounts <- as.data.frame(AnnotationCounts)
         AnnotationCounts$Samples <- colnames(countsTable)
@@ -293,4 +296,4 @@ tcga2gtex <- function(project=c("TCGA-LUSC"), data_dir="./GDCdata", num_tp=100, 
 #linshi <- mat2plot(data_dir = "../GDCdata/", is_short = TRUE)
 #project=c("TCGA-LUSC"); data_dir="../GDCdata"; num_tp=100; num_nt=100;tp_t="TP"; tp_n="NT"; 
 #is_short=TRUE; save=TRUE; target=c("FAM135B"); candidate="FAM135B";p=project[1]
-#is_voom=TRUE; is_log=FALSE; norm_method="none";prior.count=0; unit="tpm"
+#is_voom=TRUE; is_log=FALSE; norm_method="none";prior.count=0; unit="tpm"; cut=0.25; is_filt=TRUE
