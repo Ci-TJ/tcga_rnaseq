@@ -157,7 +157,7 @@ tcga2gtex <- function(project=c("TCGA-LUSC"), data_dir="./GDCdata", num_tp=100, 
       }
 
       valid_id <- intersect(gtex_id, colnames(g0))  #some samples are not use to rna-seq
-      g0 <- g0 %>% select(c("Name", "Description", valid_id)) 
+      g0 <- g0 %>% select(all_of(c("Name", "Description", valid_id)))
       gid2s <- g0 %>% select(Name, Description) %>% distinct(Description, .keep_all = T) #if by="Description", it will change the colnames to "by"
       gtex_data <- data.frame(g0); rownames(gtex_data) <- g0$Name; gtex_data <- gtex_data[,-c(1,2)] #Note TCGAanalyze_Normalization need gene_id not gene_name
       gid2s$gene_id <- gsub("[.].*", "", gid2s$Name)
