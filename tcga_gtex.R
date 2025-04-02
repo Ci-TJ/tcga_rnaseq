@@ -150,16 +150,21 @@ tcga2gtex <- function(project=c("TCGA-LUSC"), data_dir="./GDCdata", num_tp=100, 
       #############################
       tissue <- df_split %>% filter(project == p) %>% pull(GTEx_SMTSD)
       gtex_id <- id2tissue %>% filter(SMTSD %in% tissue) %>% pull(SAMPID)
-      valid_id <- intersect(gtex_id, colnames(gtex_data))  #some samples are not use to rna-seq
+      if (is_voom){
+        g0 <- fread("GTEx_Analysis_v10_RNASeQCv2.4.2_gene_reads.gct", skip = 2, header = TRUE, sep = "\t") #check the path
+      } else {
+        g0 <- fread("GTEx_Analysis_v10_RNASeQCv2.4.2_gene_tpm.gct", skip = 2, header = TRUE, sep = "\t") #check the path
+      }
+
+      valid_id <- intersect(gtex_id, colnames(g0))  #some samples are not use to rna-seq
+      g0 <- g0 %>% select(c("Name", "Description", valid_id)) 
+      gid2s <- g0 %>% select(Name, Description) %>% distinct(Description, .keep_all = T) #if by="Description", it will change the colnames to "by"
+      gtex_data <- data.frame(g0); rownames(gtex_data) <- g0$Name; gtex_data <- gtex_data[,-c(1,2)] #Note TCGAanalyze_Normalization need gene_id not gene_name
+      gid2s$gene_id <- gsub("[.].*", "", gid2s$Name)
+      colnames(gtex_data) <- gsub("\\.", "-", colnames(gtex_data)) #colnames change after distinct()
+      
       if (length(valid_id) > 3) {
         if (is_voom) {
-          g0 <- fread("GTEx_Analysis_v10_RNASeQCv2.4.2_gene_reads.gct", skip = 2, header = TRUE, sep = "\t") #check the path
-          g0 <- g0 %>% select(c("Name", "Description", valid_id)) 
-          gid2s <- g0 %>% select(Name, Description) %>% distinct(Description, .keep_all = T) #if by="Description", it will change the colnames to "by"
-          gid2s$gene_id <- gsub("[.].*", "", gid2s$Name)
-          gtex_data <- data.frame(g0); rownames(gtex_data) <- g0$Name; gtex_data <- gtex_data[,-c(1,2)] #Note TCGAanalyze_Normalization need gene_id not gene_name
-          colnames(gtex_data) <- gsub("\\.", "-", colnames(gtex_data)) #colnames change after distinct()
-          
           gtex_normal <- gtex_data[, valid_id]
           gtex_normal <- data_pre(df=gtex_normal, is_filt=is_filt, cut=cut)
           #voom transformation of the data (log)
@@ -167,13 +172,6 @@ tcga2gtex <- function(project=c("TCGA-LUSC"), data_dir="./GDCdata", num_tp=100, 
           #taking log transformed data for exploration of batch effects
           gtex_normal <- gtex_normal$E #初始化为voom转换矩阵，确保后续代码可以继续运行
         } else {
-          g0 <- fread("GTEx_Analysis_v10_RNASeQCv2.4.2_gene_tpm.gct", skip = 2, header = TRUE, sep = "\t") #check the path
-          g0 <- g0 %>% select(c("Name", "Description", valid_id)) 
-          gid2s <- g0 %>% select(Name, Description) %>% distinct(Description, .keep_all = T) #if by="Description", it will change the colnames to "by"
-          gid2s$gene_id <- gsub("[.].*", "", gid2s$Name)
-          gtex_data <- data.frame(g0); rownames(gtex_data) <- g0$Name; gtex_data <- gtex_data[,-c(1,2)] #Note TCGAanalyze_Normalization need gene_id not gene_name
-          colnames(gtex_data) <- gsub("\\.", "-", colnames(gtex_data)) #colnames change after distinct()
-          
           gtex_normal <- gtex_data[, valid_id]
           gtex_normal <- log2(gtex_normal + 1)
           rownames(gtex_normal) <- gsub("[.].*", "",rownames(gtex_normal))
